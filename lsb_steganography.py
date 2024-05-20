@@ -129,39 +129,63 @@ def drop(event, file_type):
 root = TkinterDnD.Tk()
 root.title("LSB Steganography")
 
-tk.Label(root, text="Cover File:").grid(row=0, column=0, padx=10, pady=10)
-cover_file_label = tk.Label(root, text="", width=50)
+# Create a main frame
+main_frame = tk.Frame(root)
+main_frame.pack(fill=tk.BOTH, expand=1)
+
+# Create a canvas inside the main frame
+my_canvas = tk.Canvas(main_frame)
+my_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+
+# Add a scrollbar to the canvas
+my_scrollbar = tk.Scrollbar(main_frame, orient=tk.VERTICAL, command=my_canvas.yview)
+my_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+# Configure the canvas
+my_canvas.configure(yscrollcommand=my_scrollbar.set)
+my_canvas.bind('<Configure>', lambda e: my_canvas.configure(scrollregion=my_canvas.bbox("all")))
+
+# Create another frame inside the canvas
+second_frame = tk.Frame(my_canvas)
+
+# Add that new frame to a window in the canvas
+my_canvas.create_window((0, 0), window=second_frame, anchor="nw")
+
+# Now add all your widgets to the second_frame instead of the root
+# For example:
+tk.Label(second_frame, text="Cover File:").grid(row=0, column=0, padx=10, pady=10)
+cover_file_label = tk.Label(second_frame, text="", width=50)
 cover_file_label.grid(row=0, column=1, padx=10, pady=10)
-tk.Button(root, text="Select Cover File", command=lambda: select_file("cover")).grid(row=0, column=2, padx=10, pady=10)
+tk.Button(second_frame, text="Select Cover File", command=lambda: select_file("cover")).grid(row=0, column=2, padx=10, pady=10)
 cover_file_label.drop_target_register(DND_FILES)
 cover_file_label.dnd_bind('<<Drop>>', lambda event: drop(event, "cover"))
 
-cover_canvas = tk.Canvas(root, width=300, height=300, bg="white")
+cover_canvas = tk.Canvas(second_frame, width=300, height=300, bg="white")
 cover_canvas.grid(row=0, column=3, padx=10, pady=10)
 
-tk.Label(root, text="Payload File:").grid(row=1, column=0, padx=10, pady=10)
-payload_file_label = tk.Label(root, text="", width=50)
+tk.Label(second_frame, text="Payload File:").grid(row=1, column=0, padx=10, pady=10)
+payload_file_label = tk.Label(second_frame, text="", width=50)
 payload_file_label.grid(row=1, column=1, padx=10, pady=10)
-tk.Button(root, text="Select Payload File", command=lambda: select_file("payload")).grid(row=1, column=2, padx=10, pady=10)
+tk.Button(second_frame, text="Select Payload File", command=lambda: select_file("payload")).grid(row=1, column=2, padx=10, pady=10)
 payload_file_label.drop_target_register(DND_FILES)
 payload_file_label.dnd_bind('<<Drop>>', lambda event: drop(event, "payload"))
 
-tk.Label(root, text="Stego File:").grid(row=2, column=0, padx=10, pady=10)
-stego_file_label = tk.Label(root, text="", width=50)
+tk.Label(second_frame, text="Stego File:").grid(row=2, column=0, padx=10, pady=10)
+stego_file_label = tk.Label(second_frame, text="", width=50)
 stego_file_label.grid(row=2, column=1, padx=10, pady=10)
-tk.Button(root, text="Select Stego File", command=lambda: select_file("stego")).grid(row=2, column=2, padx=10, pady=10)
+tk.Button(second_frame, text="Select Stego File", command=lambda: select_file("stego")).grid(row=2, column=2, padx=10, pady=10)
 stego_file_label.drop_target_register(DND_FILES)
 stego_file_label.dnd_bind('<<Drop>>', lambda event: drop(event, "stego"))
 
-stego_canvas = tk.Canvas(root, width=300, height=300, bg="white")
+stego_canvas = tk.Canvas(second_frame, width=300, height=300, bg="white")
 stego_canvas.grid(row=2, column=3, padx=10, pady=10)
 
-tk.Label(root, text="Number of LSBs:").grid(row=3, column=0, padx=10, pady=10)
-bits_entry = tk.Entry(root)
+tk.Label(second_frame, text="Number of LSBs:").grid(row=3, column=0, padx=10, pady=10)
+bits_entry = tk.Entry(second_frame)
 bits_entry.grid(row=3, column=1, padx=10, pady=10)
 bits_entry.insert(0, "1")
 
-tk.Button(root, text="Encode", command=encode).grid(row=3, column=2, padx=10, pady=10)
-tk.Button(root, text="Decode", command=decode).grid(row=3, column=3, padx=10, pady=10)
+tk.Button(second_frame, text="Encode", command=encode).grid(row=3, column=2, padx=10, pady=10)
+tk.Button(second_frame, text="Decode", command=decode).grid(row=3, column=3, padx=10, pady=10)
 
 root.mainloop()
