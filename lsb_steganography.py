@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, ImageTk
 import numpy as np
+import wave
 
 # Function to select a file
 def select_file(file_type):
@@ -69,6 +70,8 @@ def encode():
         for bit_index in range(bits):
             if i + bit_index < payload_len:
                 bit = int(payload_bin[i + bit_index])
+                # the below line of code toggles or sets a specific bit (bit_index) within the byte variable based on the value of bit. 
+                # If bit is 1, it sets the bit at bit_index to 1, and if bit is 0, it clears the bit at bit_index.
                 byte = (byte & ~(1 << bit_index)) | (bit << bit_index)
         flat_cover_array[i//bits] = byte
     
@@ -79,6 +82,103 @@ def encode():
     stego_file_label.config(text=stego_image_path)
     display_image(stego_image_path, stego_canvas)
     messagebox.showinfo("Success", "Payload has been successfully encoded into the cover image.")
+    
+    
+# Function to encode text into a .wav file
+def WAV_encode():
+    cover_path = cover_file_label.cget("text")
+    payload_path = payload_file_label.cget("text")
+    
+    try:
+        LSB_bits = int(bits_entry.get())
+        if LSB_bits < 1 or LSB_bits > 8:
+            raise ValueError("Number of LSBs must be between 1 and 8.")
+    except ValueError as e:
+        messagebox.showerror("Error", str(e))
+        return
+    
+    if not cover_path or not payload_path:
+        messagebox.showerror("Error", "Please select both cover and payload files.")
+        return
+    
+    # Open cover_path as audio file
+    with wave.open(cover_path, 'rb') as audioCoverFile:
+        # Read audio data
+        frames = audioCoverFile.readframes(audioCoverFile.getnframes())
+        frame_array = bytearray(frames) 
+    
+        # Read payload text
+        with open(payload_path, 'r') as file:
+            payload = file.read()
+            
+            # Convert payload to binary
+            payload_bin = ''.join([ format(ord(char), '08b') for char in payload ])
+            payload_len = len(payload_bin)
+                
+            # Check if payload can be hidden in cover image, every byte = 8 bits
+            if payload_len > len(frame_array) * 8: 
+                messagebox.showerror("Error", "Payload is too large to hide in the selected cover image.")
+                return
+            
+            # Encode secret data into LSB of audio frames
+            data_index = 0
+            for i in range(len(frame_array)): # for every byte
+                for j in range(LSB_bits):  # for 0 to (LSBs input)-1
+                    if data_index < payload_len: # if have not reached last bit of payload
+                        # Get the next bit from secret data
+                        secretBit = (int(payload_bin[data_index]) >> j) & 1
+                        # replaces the j-th bit of frame byte with secretBit, be it 0 or 1
+                        frame_array[i] = (frame_array[i] & ~(1 << j)) | (secretBit << j)
+                        data_index += 1
+                    else:
+                        break
+                
+    # Write the modified audio data to a new file
+    stego_path = "output_audio_stego.wav"
+    with wave.open(stego_path, 'wb') as audio_out:
+        audio_out.setparams(audioCoverFile.getparams())
+        audio_out.writeframes(frame_array)
+        messagebox.showinfo("Encoded", "Payload written into audio cover file successfully")
+        
+        
+def WAV_decode():
+    stego_path = stego_file_label.cget("text")
+    
+    try:
+        LSB_bits = int(bits_entry.get())
+        if LSB_bits < 1 or LSB_bits > 8:
+            raise ValueError("Number of LSBs must be between 1 and 8.")
+    except ValueError as e:
+        messagebox.showerror("Error", str(e))
+        return
+    
+    if not stego_path:
+        messagebox.showerror("Error", "Please select a stego file.")
+        return
+    
+    # Open the audio file for reading
+    with wave.open(stego_path, 'rb') as audioStegoFile:
+        # Read audio data
+        frames = audioStegoFile.readframes(audioStegoFile.getnframes())
+        frame_array = bytearray(frames)
+                    
+        # Extract payload from stego audio file
+        payload_bin = ''
+        for i in range(len(frame_array)):
+            for j in range(LSB_bits):
+                bit = (frame_array[i] >> j) & 1
+                payload_bin += str(bit)
+                
+        # Convert binary payload to text
+        payload = ''
+        for i in range(0, len(payload_bin), 8):
+            byte = payload_bin[i:i+8]
+            if len(byte) == 8:
+                char = chr(int(byte, 2))
+                payload += char
+        
+        messagebox.showinfo("Decoded Payload", f"Decoded text: {payload}")
+        
 
 # Function to decode text from an image
 def decode():
@@ -187,5 +287,7 @@ bits_entry.insert(0, "1")
 
 tk.Button(second_frame, text="Encode", command=encode).grid(row=3, column=2, padx=10, pady=10)
 tk.Button(second_frame, text="Decode", command=decode).grid(row=3, column=3, padx=10, pady=10)
+tk.Button(second_frame, text="Encode Audio File", command=WAV_encode).grid(row=3, column=4, padx=10, pady=10)
+tk.Button(second_frame, text="Decode Audio File", command=WAV_decode).grid(row=3, column=5, padx=10, pady=10)
 
 root.mainloop()
