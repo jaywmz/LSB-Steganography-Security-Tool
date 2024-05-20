@@ -1,0 +1,18 @@
+LSB Steganography
+This is a Python script for a GUI application that performs Least Significant Bit (LSB) steganography. It uses the Tkinter library for the GUI and the PIL library for image manipulation.
+
+Prerequisites
+Before you begin, ensure you have met the following requirements:
+- You have installed Python 3.6 or later.
+- You have installed the following Python libraries: tkinter, PIL, numpy, and tkinterdnd2.
+
+You can install the necessary libraries with pip:
+- pip install pillow numpy tkinterdnd2
+
+To run LSB Steganography, follow these steps:
+1. Open a terminal in the directory containing lsb_steganography.py.
+2. Run the script with the following command:
+- python lsb_steganography.py
+3. The GUI will open. You can select a cover file (an image file), a payload file (a text file), and the number of least significant bits to use for the steganography.
+4. Click "Encode" to hide the payload in the cover image. The steganographic image will be saved as stego_image.png and displayed in the GUI.
+You can also select a stego file (an image file with hidden data) and click "Decode" to extract the hidden data.
