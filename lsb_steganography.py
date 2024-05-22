@@ -68,11 +68,18 @@ def encode():
     for i in range(0, payload_len, bits):
         byte = flat_cover_array[i//bits]
         for bit_index in range(bits):
-            if i + bit_index < payload_len:
-                bit = int(payload_bin[i + bit_index])
-                # the below line of code toggles or sets a specific bit (bit_index) within the byte variable based on the value of bit. 
-                # If bit is 1, it sets the bit at bit_index to 1, and if bit is 0, it clears the bit at bit_index.
-                byte = (byte & ~(1 << bit_index)) | (bit << bit_index)
+            if (i + ((bits-1)-bit_index)) < payload_len:
+                # to get the replacement bit from payload_bin at the index corresponding with the bit_index 
+                bit = int(payload_bin[i + ((bits-1)-bit_index)])
+                # create the mask to clear the bit at the specified bit_index, depending on how many LSBs selected
+                mask = ~(1 << bit_index)
+                # AND the mask, to clear the bit at the specific index
+                clearedByte = byte & mask
+                # move the replacement bit to specific index position
+                positionedReplacementBit = bit << bit_index
+                # OR the positioned replacement bit, to set the bit at the specified index of frame byte with the replacement bit
+                byte = clearedByte | positionedReplacementBit
+                # byte = (byte & ~(1 << bit_index)) | (bit << bit_index)
         flat_cover_array[i//bits] = byte
     
     stego_array = flat_cover_array.reshape(cover_array.shape)
@@ -202,11 +209,16 @@ def decode():
     # Extract payload from stego image
     flat_stego_array = stego_array.flatten()
     payload_bin = ''
+    mask = getMask(bits)
     for i in range(0, flat_stego_array.size, bits):
         byte = flat_stego_array[i//bits]
-        for bit_index in range(bits):
-            bit = (byte >> bit_index) & 1
-            payload_bin += str(bit)
+        # for bit_index in range(bits):
+        #     # essentially popping bits from the right, one by one every iteration, but then the bits are appended in reversed order, so wrong payload
+        #     bit = (byte >> bit_index) & 1
+        #     payload_bin += str(bit)
+        byte = byte & mask
+        bin = format(byte, 'b').rjust(bits, '0')
+        payload_bin += bin
     
     # Convert binary payload to text
     payload = ''
@@ -218,12 +230,34 @@ def decode():
     
     messagebox.showinfo("Decoded Payload", f"Decoded text: {payload}")
 
+
 # Function to handle drag-and-drop events
 def drop(event, file_type):
     file_path = event.data
     if file_path.startswith('{') and file_path.endswith('}'):
         file_path = file_path[1:-1]  # Remove curly braces if present
     update_file_label(file_path, file_type)
+    
+    
+def getMask(lsb):
+        match(lsb):
+            case 1:
+                return 1
+            case 2:
+                return 3
+            case 3:
+                return 7
+            case 4:
+                return 15
+            case 5:
+                return 31
+            case 6:
+                return 63
+            case 7:
+                return 127
+            case 8:
+                return 255
+
 
 # Main GUI setup
 root = TkinterDnD.Tk()
