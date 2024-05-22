@@ -64,9 +64,9 @@ class Steganography:
         if length > 255:
             print("text too long! (don't exceed 255 characters)")
             return {"status": False, "message": "text too long! (don't exceed 255 characters)"}
-        if img.mode != 'RGB':
-            print("image mode needs to be RGB")
-            return {"status": False, "message": "image mode needs to be RGB"}
+        # if img.mode != 'RGB':
+        #     print("image mode needs to be RGB")
+        #     return {"status": False, "message": "image mode needs to be RGB"}
         encoded = img.copy()
         width, height = img.size
         index = 0
@@ -74,34 +74,51 @@ class Steganography:
         mask = 0xFF << lsb  # Create a mask to clear the least significant bits
 
         binary_msg = ''.join([format(ord(i), '08b') for i in msg])  # Convert the message to binary
+        len_binary_msg = len(binary_msg)
 
         for row in range(height):
             for col in range(width):
-                r, g, b = img.getpixel((col, row))
-
-                # Clear the least significant bits
+                r, g, b, a = img.getpixel((col, row))
+                
+                # clear LSBs 
                 r &= mask
                 g &= mask
                 b &= mask
 
                 # Add the bits of the message
-                if index < len(binary_msg):
-                    r |= int(binary_msg[index:index+lsb], 2)  # Red channel
+                if index < len_binary_msg:
+                    secretBits = binary_msg[index:index+lsb]
+                    # if message not divisible by lsb, last character bits misalign, need to pad 0s on the right to width of lsb
+                    if len(secretBits) < lsb:
+                        secretBits = secretBits.ljust(lsb, '0')
+                    secretBitsInt = int(secretBits, 2)
+                    r = r | secretBitsInt
+                    # r |= int(binary_msg[index:index+lsb], 2)  # Red channel
                     index += lsb
-                if index < len(binary_msg):
-                    g |= int(binary_msg[index:index+lsb], 2)  # Green channel
+                if index < len_binary_msg:
+                    secretBits = binary_msg[index:index+lsb]
+                    if len(secretBits) < lsb:
+                        secretBits = secretBits.ljust(lsb, '0')
+                    secretBitsInt = int(secretBits, 2)
+                    g = g | secretBitsInt
+                    # g |= int(binary_msg[index:index+lsb], 2)  # Green channel
                     index += lsb
-                if index < len(binary_msg):
-                    b |= int(binary_msg[index:index+lsb], 2)  # Blue channel
+                if index < len_binary_msg:
+                    secretBits = binary_msg[index:index+lsb]
+                    if len(secretBits) < lsb:
+                        secretBits = secretBits.ljust(lsb, '0')
+                    secretBitsInt = int(secretBits, 2)
+                    b = b | secretBitsInt
+                    # b |= int(binary_msg[index:index+lsb], 2)  # Blue channel
                     index += lsb
-
-                encoded.putpixel((col, row), (r, g, b))
+                
+                encoded.putpixel((col, row), (r, g, b, a))
                 
         if isinstance(encoded, Image.Image):
             # encoded.save(output_path)
             # get img path extension to save the image in the same format
             img_ext = img_path.split('.')
-            output_path = os.path.join(output_dir + '/encoded.' + img_ext[-1])
+            output_path = os.path.join(output_dir + '/stego_image.' + img_ext[-1])
             encoded.save(output_path)
             if os.name == 'nt':
                 os.startfile(output_path)
@@ -126,25 +143,38 @@ class Steganography:
                 img = Image.open(img_path)
             width, height = img.size
             msg = ""
-            index = 0
+            
+            mask = Steganography.getMask(lsb)
             
             for row in range(height):
                 for col in range(width):
-                    r, g, b = img.getpixel((col, row))
-
+                    r, g, b, a  = img.getpixel((col, row))
+                    
                     # Extract the bits of the message
-                    if index < len(msg):
-                        msg += bin(r)[-lsb:]  # Red channel
-                        index += lsb
-                    if index < len(msg):
-                        msg += bin(g)[-lsb:]  # Green channel
-                        index += lsb
-                    if index < len(msg):
-                        msg += bin(b)[-lsb:]  # Blue channel
-                        index += lsb
+                    # msg += bin(r)[-lsb:]  # Red channel
+                    # msg += bin(g)[-lsb:]  # Green channel
+                    # msg += bin(b)[-lsb:]  # Blue channel
+                    r &= mask
+                    bin = format(r, 'b').rjust(lsb, '0')
+                    msg += bin
+                    
+                    g &= mask
+                    bin = format(g, 'b').rjust(lsb,'0')
+                    msg += bin
+                    
+                    b &= mask
+                    bin = format(b, 'b').rjust(lsb,'0')
+                    msg += bin
+                    
 
             # Convert the binary message to a string
-            decoded_msg = ''.join(chr(int(msg[i:i+8].replace('b', ''), 2)) for i in range(0, len(msg), 8))
+            decoded_msg = ''
+            for i in range(0, len(msg), 8):
+                byte = msg[i:i+8]
+                if len(byte) == 8:
+                    char = chr(int(byte, 2))
+                    decoded_msg += char
+            #decoded_msg = ''.join(chr(int(msg[i:i+8], 2)) for i in range(0, len(msg), 8))
 
             print(decoded_msg)
 

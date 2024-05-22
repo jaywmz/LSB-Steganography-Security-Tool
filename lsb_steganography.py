@@ -91,7 +91,51 @@ def encode():
     messagebox.showinfo("Success", "Payload has been successfully encoded into the cover image.")
     
     
-# Function to encode text into a .wav file
+# Function to decode text from an image
+def decode():
+    stego_path = stego_file_label.cget("text")
+    try:
+        bits = int(bits_entry.get())
+        if bits < 1 or bits > 8:
+            raise ValueError("Number of LSBs must be between 1 and 8.")
+    except ValueError as e:
+        messagebox.showerror("Error", str(e))
+        return
+    
+    if not stego_path:
+        messagebox.showerror("Error", "Please select a stego file.")
+        return
+    
+    # Load stego image
+    stego_image = Image.open(stego_path)
+    stego_array = np.array(stego_image)
+    
+    # Extract payload from stego image
+    flat_stego_array = stego_array.flatten()
+    payload_bin = ''
+    mask = getMask(bits)
+    for i in range(0, flat_stego_array.size, bits):
+        byte = flat_stego_array[i//bits]
+        # for bit_index in range(bits):
+        #     # essentially popping bits from the right, one by one every iteration, but then the bits are appended in reversed order, so wrong payload
+        #     bit = (byte >> bit_index) & 1
+        #     payload_bin += str(bit)
+        byte = byte & mask
+        bin = format(byte, 'b').rjust(bits, '0')
+        payload_bin += bin
+    
+    # Convert binary payload to text
+    payload = ''
+    for i in range(0, len(payload_bin), 8):
+        byte = payload_bin[i:i+8]
+        if len(byte) == 8:
+            char = chr(int(byte, 2))
+            payload += char
+    
+    messagebox.showinfo("Decoded Payload", f"Decoded text: {payload}")
+
+    
+# (outdated) Function to encode text into a .wav file
 def WAV_encode():
     cover_path = cover_file_label.cget("text")
     payload_path = payload_file_label.cget("text")
@@ -146,8 +190,9 @@ def WAV_encode():
         audio_out.setparams(audioCoverFile.getparams())
         audio_out.writeframes(frame_array)
         messagebox.showinfo("Encoded", "Payload written into audio cover file successfully")
+
         
-        
+# (outdated) function to encode text into a .wav file
 def WAV_decode():
     stego_path = stego_file_label.cget("text")
     
@@ -185,50 +230,6 @@ def WAV_decode():
                 payload += char
         
         messagebox.showinfo("Decoded Payload", f"Decoded text: {payload}")
-        
-
-# Function to decode text from an image
-def decode():
-    stego_path = stego_file_label.cget("text")
-    try:
-        bits = int(bits_entry.get())
-        if bits < 1 or bits > 8:
-            raise ValueError("Number of LSBs must be between 1 and 8.")
-    except ValueError as e:
-        messagebox.showerror("Error", str(e))
-        return
-    
-    if not stego_path:
-        messagebox.showerror("Error", "Please select a stego file.")
-        return
-    
-    # Load stego image
-    stego_image = Image.open(stego_path)
-    stego_array = np.array(stego_image)
-    
-    # Extract payload from stego image
-    flat_stego_array = stego_array.flatten()
-    payload_bin = ''
-    mask = getMask(bits)
-    for i in range(0, flat_stego_array.size, bits):
-        byte = flat_stego_array[i//bits]
-        # for bit_index in range(bits):
-        #     # essentially popping bits from the right, one by one every iteration, but then the bits are appended in reversed order, so wrong payload
-        #     bit = (byte >> bit_index) & 1
-        #     payload_bin += str(bit)
-        byte = byte & mask
-        bin = format(byte, 'b').rjust(bits, '0')
-        payload_bin += bin
-    
-    # Convert binary payload to text
-    payload = ''
-    for i in range(0, len(payload_bin), 8):
-        byte = payload_bin[i:i+8]
-        if len(byte) == 8:
-            char = chr(int(byte, 2))
-            payload += char
-    
-    messagebox.showinfo("Decoded Payload", f"Decoded text: {payload}")
 
 
 # Function to handle drag-and-drop events
