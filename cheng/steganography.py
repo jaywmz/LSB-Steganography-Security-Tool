@@ -2,6 +2,7 @@ from PIL import Image
 import wave
 import os 
 import subprocess
+import math
 
 class Steganography:
     
@@ -58,17 +59,30 @@ class Steganography:
            
         if fileExt == '.gif' or fileExt == '.GIF':
             img = Image.open(img_path).convert("RGB")
-        else:
+        else:   
             img = Image.open(img_path)
+
+        width, height = img.size
+        stop_code = '\x00'
+        max_payload_char = math.floor((width * height * 3 * lsb) / 8) - len(stop_code);
+        print("Maximum number of payload characters for the current image: " + str(max_payload_char))
+        msg += stop_code # add a stopping null character, one char space should be reserved for stopping code
         length = len(msg)
-        if length > 255:
-            print("text too long! (don't exceed 255 characters)")
-            return {"status": False, "message": "text too long! (don't exceed 255 characters)"}
+        print(msg)
+        if length > max_payload_char:
+            print(f"text too long! (don't exceed {max_payload_char} characters)")
+            return {"status": False, "message": "text too long! (don't exceed " + str(max_payload_char) + " characters)"}
         # if img.mode != 'RGB':
         #     print("image mode needs to be RGB")
         #     return {"status": False, "message": "image mode needs to be RGB"}
+        
+        total_image_bits = width * height * 3 * 8
+        print("Total amount of characters used up: " + str(length) + "/" + str(max_payload_char) + " (" + str(length / max_payload_char * 100) + "%)")
+        print("Total amount of bits available in image: " + str(total_image_bits))
+        print("Total amount of bits to replace for payload: " + str(length * 8))
+        print("Estimated image distortion: " + str(length * 8 / total_image_bits * 100) + "%")
+        
         encoded = img.copy()
-        width, height = img.size
         index = 0
 
         mask = 0xFF << lsb  # Create a mask to clear the least significant bits
@@ -111,6 +125,8 @@ class Steganography:
                     b = b | secretBitsInt
                     # b |= int(binary_msg[index:index+lsb], 2)  # Blue channel
                     index += lsb
+                if index >= len_binary_msg:
+                    break
                 
                 encoded.putpixel((col, row), (r, g, b, a))
                 
@@ -135,14 +151,14 @@ class Steganography:
         Use the LSB of the pixels to decode the message from the image
         """
         try:
-                
+            stopping_code = "====="
             fileExt = img_path.split('.')[-1]
             if fileExt == '.gif' or fileExt == '.GIF':
                 img = Image.open(img_path).convert("RGB")
             else:
                 img = Image.open(img_path)
             width, height = img.size
-            msg = ""
+            msg_bin = ""
             
             mask = Steganography.getMask(lsb)
             
@@ -156,27 +172,31 @@ class Steganography:
                     # msg += bin(b)[-lsb:]  # Blue channel
                     r &= mask
                     bin = format(r, 'b').rjust(lsb, '0')
-                    msg += bin
+                    msg_bin += bin
                     
                     g &= mask
                     bin = format(g, 'b').rjust(lsb,'0')
-                    msg += bin
+                    msg_bin += bin
                     
                     b &= mask
                     bin = format(b, 'b').rjust(lsb,'0')
-                    msg += bin
+                    msg_bin += bin
                     
 
             # Convert the binary message to a string
             decoded_msg = ''
-            for i in range(0, len(msg), 8):
-                byte = msg[i:i+8]
+            for i in range(0, len(msg_bin), 8):
+                byte = msg_bin[i:i+8]
                 if len(byte) == 8:
+                    if int(byte, 2) == 0: # break if we hit a null character (stop code)
+                        break
+                    
                     char = chr(int(byte, 2))
                     decoded_msg += char
             #decoded_msg = ''.join(chr(int(msg[i:i+8], 2)) for i in range(0, len(msg), 8))
 
-            print(decoded_msg)
+            #print("decoded_msg with stopping code: " + decoded_msg)
+            #print("decoded_msg without stopping code: " + decoded_msg[:stopping_code_position])
 
             return {"status": True, "message": decoded_msg}
         except Exception as e:
