@@ -1,4 +1,6 @@
 from PIL import Image, ImageSequence
+from moviepy.editor import VideoFileClip, VideoClip
+import numpy as np
 import wave
 import os 
 import subprocess
@@ -28,9 +30,8 @@ class Steganography:
             print("Encoding message into GIF...")
             return Steganography.encode_gif(input_path, msg, lsb, output_dir)
         
-        elif(input_path.endswith(('.mp4', '.avi', '.mov', '.mkv'))):
-            print("Encoding message into video file...")
-            return {"status": False, "message": "Video file encoding not supported yet"}
+        elif input_path.endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            return Steganography.encode_video(input_path, msg, lsb, output_dir)
     
     
     @staticmethod
@@ -53,9 +54,9 @@ class Steganography:
             print("Decoding message from GIF...")
             return Steganography.decode_gif(input_path, lsb)
         
-        elif(input_path.endswith(('.mp4', '.avi', '.mov', '.mkv'))):
-            print("Decoding message from video file...")
-            return {"status": False, "message": "Video file encoding not supported yet"}
+        elif input_path.endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            print("Decoding message from video...")
+            return Steganography.decode_video(input_path, lsb)
     
     
     @staticmethod
@@ -320,8 +321,6 @@ class Steganography:
         # Open the GIF and convert each frame to RGB
         gif = Image.open(gif_path)
 
-
-
         frames = []
         for frame in ImageSequence.Iterator(gif):
             if frame.mode == 'P':
@@ -330,7 +329,7 @@ class Steganography:
                 frames.append(frame.convert('RGBA'))
 
         # Calculate the total number of bits available in the GIF
-        total_bits = sum(frame.width * frame.height * 3 * 8 for frame in frames)
+        total_bits = sum(frame.width * frame.height * 3 for frame in frames)
 
         # Add a stop code to the message and convert it to binary
         stop_code = '\x00'
@@ -338,64 +337,29 @@ class Steganography:
         binary_msg = ''.join(format(ord(i), '08b') for i in msg)
 
         # Check if the message is too long to fit in the GIF
-        if len(binary_msg) > total_bits:
+        if len(binary_msg) > total_bits * lsb:
             return {"status": False, "message": "Message too long to fit in GIF"}
 
         # Encode the message into each frame
         index = 0
-        mask = 0xFF << lsb
-
-        binary_msg = ''.join([format(ord(i), '08b') for i in msg])  # Convert the message to binary
-        len_binary_msg = len(binary_msg)
+        mask = (1 << lsb) - 1
+        clear_mask = ~mask & 0xFF
 
         for frame in frames:
             for row in range(frame.height):
                 for col in range(frame.width):
-                    pixel = frame.getpixel((col, row))
+                    pixel = list(frame.getpixel((col, row)))
+
+                    for i in range(3):  # RGB channels
+                        if index < len(binary_msg):
+                            pixel[i] &= clear_mask  # Clear the LSBs
+                            pixel[i] |= int(binary_msg[index:index+lsb].ljust(lsb, '0'), 2)
+                            index += lsb
 
                     if frame.mode == 'RGBA':
-                        r, g, b, a = pixel
+                        frame.putpixel((col, row), tuple(pixel))
                     else:
-                        r, g, b = pixel
-                        a = 255
-
-                    r &= mask  # Clear the least significant bits
-                    g &= mask
-                    b &= mask
-
-                    # Clear the LSBs before encoding the message
-                    r = r & ~(1 << lsb)
-                    g = g & ~(1 << lsb)
-                    b = b & ~(1 << lsb)
-
-                    if index < len_binary_msg:
-                        secretBits = binary_msg[index:index+lsb]
-                        if len(secretBits) < lsb:
-                            secretBits = secretBits.ljust(lsb, '0')
-                        secretBitsInt = int(secretBits, 2)
-                        r = r | secretBitsInt
-                        index += lsb
-
-                    if index < len_binary_msg:
-                        secretBits = binary_msg[index:index+lsb]
-                        if len(secretBits) < lsb:
-                            secretBits = secretBits.ljust(lsb, '0')
-                        secretBitsInt = int(secretBits, 2)
-                        g = g | secretBitsInt
-                        index += lsb
-
-                    if index < len_binary_msg:
-                        secretBits = binary_msg[index:index+lsb]
-                        if len(secretBits) < lsb:
-                            secretBits = secretBits.ljust(lsb, '0')
-                        secretBitsInt = int(secretBits, 2)
-                        b = b | secretBitsInt
-                        index += lsb
-
-                    if index >= len_binary_msg:
-                        break
-
-                    frame.putpixel((col, row), (r, g, b, a))
+                        frame.putpixel((col, row), (pixel[0], pixel[1], pixel[2]))
 
         # Save the encoded GIF
         output_path = os.path.join(output_dir, 'stego_gif.gif')
@@ -408,6 +372,7 @@ class Steganography:
             subprocess.run(['open', output_path])
 
         return {"status": True, "message": "Message encoded successfully"}
+
 
     # @staticmethod        
     # def divide_payload(payload, num_parts):
@@ -425,20 +390,17 @@ class Steganography:
     def decode_gif(gif_path, lsb):
         try:
             gif = Image.open(gif_path)
-            # print(f"Opened GIF: {gif_path}")  # Debugging print statement
             msg_bin = ""
             
-            mask = Steganography.getMask(lsb)
-            
+            mask = (1 << lsb) - 1
+
             # Iterate over each frame in the GIF
             for frame in ImageSequence.Iterator(gif):
-                # print(f"Processing frame: {frame}")  # Debugging print statement
                 width, height = frame.size
                 
                 for row in range(height):
                     for col in range(width):
                         pixel = frame.getpixel((col, row))
-                        # print(f"Processing pixel: {pixel}")  # Debugging print statement
 
                         if frame.mode == 'P':
                             palette = frame.getpalette()
@@ -453,34 +415,33 @@ class Steganography:
                                 r, g, b = pixel
                         
                         # Extract the bits of the message
-                        r = r & mask
-                        bin = format(r, '08b')[-lsb:]
-                        msg_bin += bin
+                        msg_bin += format(r & mask, f'0{lsb}b')
+                        msg_bin += format(g & mask, f'0{lsb}b')
+                        msg_bin += format(b & mask, f'0{lsb}b')
 
-                        g = g & mask
-                        bin = format(g, '08b')[-lsb:]
-                        msg_bin += bin
-
-                        b = b & mask
-                        bin = format(b, '08b')[-lsb:]
-                        msg_bin += bin
+                        # Check if we've found the stop code
+                        if len(msg_bin) >= 8 and msg_bin[-8:] == format(ord('\x00'), '08b'):
+                            break
+                    if len(msg_bin) >= 8 and msg_bin[-8:] == format(ord('\x00'), '08b'):
+                        break
+                if len(msg_bin) >= 8 and msg_bin[-8:] == format(ord('\x00'), '08b'):
+                    break
 
             # Convert the binary message to a string
             decoded_msg = ''
             for i in range(0, len(msg_bin), 8):
                 byte = msg_bin[i:i+8]
                 if len(byte) == 8:
-                    if int(byte, 2) == 0: # break if we hit a null character (stop code)
-                        break
-                    
                     char = chr(int(byte, 2))
+                    if char == '\x00':
+                        break
                     decoded_msg += char
-            
-            # print(f"Decoded message: {decoded_msg}") # Debugging print statement
 
             return {"status": True, "message": decoded_msg}
         except Exception as e:
             return {"status": False, "message": str(e)}
+
+
         
     @staticmethod
     def getMask(lsb):
@@ -501,3 +462,98 @@ class Steganography:
                 return 127
             case 8:
                 return 255
+            
+    @staticmethod
+    def encode_video(video_path, msg, lsb, output_dir):
+        stop_code = '\x00'
+        msg += stop_code
+        binary_msg = ''.join(format(ord(i), '08b') for i in msg)
+        msg_len = len(binary_msg)
+
+        clip = VideoFileClip(video_path)
+        frames = [frame for frame in clip.iter_frames()]
+        total_pixels = sum(frame.shape[0] * frame.shape[1] for frame in frames)
+        max_payload_bits = total_pixels * 3 * lsb
+
+        if msg_len > max_payload_bits:
+            return {"status": False, "message": "Message too long to fit in video"}
+
+        idx = 0
+        mask = Steganography.getMask(lsb)
+        clear_mask = ~mask & 0xFF  # Clear the LSBs
+
+        for frame in frames:
+            frame = frame.copy()  # Make a writable copy
+            h, w, _ = frame.shape
+            for y in range(h):
+                for x in range(w):
+                    if idx < msg_len:
+                        pixel = list(frame[y, x])
+                        for i in range(3):  # RGB channels
+                            if idx < msg_len:
+                                pixel[i] &= clear_mask
+                                bits_to_embed = binary_msg[idx:idx+lsb].ljust(lsb, '0')
+                                pixel[i] |= int(bits_to_embed, 2)
+                                idx += lsb
+                        frame[y, x] = tuple(pixel)
+                    if idx >= msg_len:
+                        break
+                if idx >= msg_len:
+                    break
+            if idx >= msg_len:
+                break
+
+        def make_frame(t):
+            return frames[int(clip.fps * t)]
+
+        new_clip = VideoClip(make_frame, duration=clip.duration)
+        new_clip.set_audio(clip.audio)
+        output_path = os.path.join(output_dir, 'stego_video.mp4')
+        new_clip.fps = clip.fps
+        new_clip.write_videofile(output_path, codec='libx264')
+
+        return {"status": True, "message": "Message encoded successfully"}
+    
+    @staticmethod
+    def decode_video(video_path, lsb):
+        clip = VideoFileClip(video_path)
+        frames = [frame for frame in clip.iter_frames()]
+
+        msg_bin = ""
+        mask = Steganography.getMask(lsb)
+
+        for frame in frames:
+            h, w, _ = frame.shape
+            for y in range(h):
+                for x in range(w):
+                    pixel = frame[y, x]
+                    for i in range(3):  # RGB channels
+                        msg_bin += format(pixel[i] & mask, '0' + str(lsb) + 'b')
+                        if len(msg_bin) >= 8 and msg_bin[-8:] == format(ord('\x00'), '08b'):
+                            break
+                    else:
+                        continue
+                    break
+                else:
+                    continue
+                break
+            else:
+                continue
+            break
+
+        decoded_msg = ''
+        for i in range(0, len(msg_bin), 8):
+            byte = msg_bin[i:i+8]
+            if len(byte) == 8:
+                char = chr(int(byte, 2))
+                if char == '\x00':
+                    break
+                decoded_msg += char
+
+        return {"status": True, "message": decoded_msg}
+
+    
+
+
+
+

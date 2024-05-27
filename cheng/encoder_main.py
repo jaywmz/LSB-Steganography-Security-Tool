@@ -1,10 +1,11 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QLabel, QFileDialog, QMessageBox, QMenu, QMenuBar, QAction, QComboBox, QStackedWidget
+from PyQt5.QtWidgets import QFrame, QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QLabel, QFileDialog, QMessageBox, QMenu, QMenuBar, QAction, QComboBox, QStackedWidget
 from PyQt5.QtCore import Qt, pyqtSignal, QUrl
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PIL import Image, ImageTk
 from steganography import Steganography
+import vlc
 
 class FileDropBox(QLabel):
     def __init__(self, valid_extensions, preview_stack, *args, **kwargs):
@@ -12,10 +13,10 @@ class FileDropBox(QLabel):
         self.valid_extensions = valid_extensions
         self.preview_stack = preview_stack
         
-        self.player = QMediaPlayer()
-        self.player.error.connect(self.handle_error)
-        self.video_widget = QVideoWidget()
-        self.player.setVideoOutput(self.video_widget)
+        # VLC player initialization
+        self.instance = vlc.Instance()
+        self.player = self.instance.media_player_new()
+        self.video_widget = QFrame()
         self.preview_stack.addWidget(self.video_widget)
 
         self.setText("Drag and drop a file here \nor \nclick to select")
@@ -61,35 +62,36 @@ class FileDropBox(QLabel):
             return
         if file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
             self.player.stop()
-            self.player.setMedia(QMediaContent())
             pixmap = QPixmap(file_path)
-            pixmap = pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Adjust the size as needed
-            self.preview_stack.setCurrentIndex(0)  # Switch to QLabel
+            pixmap = pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.preview_stack.setCurrentIndex(0)
             self.preview_stack.currentWidget().setPixmap(pixmap)
         elif file_path.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac')):
-            self.player.stop()  # Stop the player
-            self.player.setMedia(QMediaContent())  # Clear the current media
-            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(file_path)))
+            self.player.stop()
+            media = self.instance.media_new(file_path)
+            self.player.set_media(media)
+            self.player.set_hwnd(int(self.video_widget.winId()))
             self.player.play()
-            self.preview_stack.setCurrentIndex(1)  # Switch to QVideoWidget
+            self.preview_stack.setCurrentIndex(1)
         elif file_path.lower().endswith('.txt'):
             with open(file_path, 'r') as file:
-                content = file.read(1000)  # Read the first 1000 characters
+                content = file.read(1000)
             if len(content) == 1000:
-                content += '...'  # Add '...' to indicate that the content is truncated
+                content += '...'
             self.preview_stack.currentWidget().setText(content)
 
     def handle_error(self):
-        error = self.player.error()
-        if error != QMediaPlayer.NoError:
-            error_message = self.player.errorString()
+        error = self.player.get_state()
+        if error != vlc.State.Error:
+            error_message = self.player.get_state()
             print(f"Error: {error_message}")
             msgBox = QMessageBox(self)
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle("Error")
-            msgBox.setText(error_message)
+            msgBox.setText(f"Error: {error_message}")
             msgBox.setStyleSheet("border: 0px;")
             msgBox.exec_()
+
 
 def window():
     
