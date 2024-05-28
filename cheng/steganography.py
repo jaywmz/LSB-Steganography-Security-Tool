@@ -5,6 +5,9 @@ import wave
 import os 
 import subprocess
 import math
+import cv2
+import shutil
+import stat
 
 class Steganography:
     
@@ -31,6 +34,7 @@ class Steganography:
             return Steganography.encode_gif(input_path, msg, lsb, output_dir)
         
         elif input_path.endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            print("Encoding message into video...")
             return Steganography.encode_video(input_path, msg, lsb, output_dir)
     
     
@@ -66,7 +70,7 @@ class Steganography:
         """
         fileExt = img_path.split('.')[-1]     
            
-        if fileExt == '.gif' or fileExt == '.GIF':
+        if fileExt.lower() == 'gif':
             img = Image.open(img_path).convert("RGB")
         else:   
             img = Image.open(img_path)
@@ -81,15 +85,12 @@ class Steganography:
         if length > max_payload_char:
             print(f"text too long! (don't exceed {max_payload_char} characters)")
             return {"status": False, "message": "text too long! (don't exceed " + str(max_payload_char) + " characters)"}
-        # if img.mode != 'RGB':
-        #     print("image mode needs to be RGB")
-        #     return {"status": False, "message": "image mode needs to be RGB"}
         
         total_image_bits = width * height * 3 * 8
-        print("Total amount of characters used up: " + str(length) + "/" + str(max_payload_char) + " (" + str(length / max_payload_char * 100) + "%)")
+        print(f"Total amount of characters used up: {length}/{max_payload_char} ({length / max_payload_char * 100}%)")
         print("Total amount of bits available in image: " + str(total_image_bits))
         print("Total amount of bits to replace for payload: " + str(length * 8))
-        print("Estimated image distortion: " + str(length * 8 / total_image_bits * 100) + "%")
+        print(f"Estimated image distortion: {length * 8 / total_image_bits * 100}%")
         
         encoded = img.copy()
         index = 0
@@ -116,7 +117,6 @@ class Steganography:
                         secretBits = secretBits.ljust(lsb, '0')
                     secretBitsInt = int(secretBits, 2)
                     r = r | secretBitsInt
-                    # r |= int(binary_msg[index:index+lsb], 2)  # Red channel
                     index += lsb
                 if index < len_binary_msg:
                     secretBits = binary_msg[index:index+lsb]
@@ -124,7 +124,6 @@ class Steganography:
                         secretBits = secretBits.ljust(lsb, '0')
                     secretBitsInt = int(secretBits, 2)
                     g = g | secretBitsInt
-                    # g |= int(binary_msg[index:index+lsb], 2)  # Green channel
                     index += lsb
                 if index < len_binary_msg:
                     secretBits = binary_msg[index:index+lsb]
@@ -132,7 +131,6 @@ class Steganography:
                         secretBits = secretBits.ljust(lsb, '0')
                     secretBitsInt = int(secretBits, 2)
                     b = b | secretBitsInt
-                    # b |= int(binary_msg[index:index+lsb], 2)  # Blue channel
                     index += lsb
                 if index >= len_binary_msg:
                     break
@@ -140,10 +138,8 @@ class Steganography:
                 encoded.putpixel((col, row), (r, g, b, a))
                 
         if isinstance(encoded, Image.Image):
-            # encoded.save(output_path)
-            # get img path extension to save the image in the same format
             img_ext = img_path.split('.')
-            output_path = os.path.join(output_dir + '/stego_image.' + img_ext[-1])
+            output_path = os.path.join(output_dir, 'stego_image.' + img_ext[-1])
             encoded.save(output_path)
             if os.name == 'nt':
                 os.startfile(output_path)
@@ -161,7 +157,7 @@ class Steganography:
         """
         try:
             fileExt = img_path.split('.')[-1]
-            if fileExt == '.gif' or fileExt == '.GIF':
+            if fileExt.lower() == 'gif':
                 img = Image.open(img_path).convert("RGB")
             else:
                 img = Image.open(img_path)
@@ -186,7 +182,6 @@ class Steganography:
                     b &= mask
                     bin = format(b, 'b').rjust(lsb,'0')
                     msg_bin += bin
-                    
 
             # Convert the binary message to a string
             decoded_msg = ''
@@ -198,15 +193,10 @@ class Steganography:
                     char = chr(int(byte, 2))
                     decoded_msg += char
 
-            #print("decoded_msg with stopping code: " + decoded_msg)
-            #print("decoded_msg without stopping code: " + decoded_msg[:stopping_code_position])
-
             return {"status": True, "message": decoded_msg}
         except Exception as e:
             return {"status": False, "message": str(e)}
     
-    
-    # Reference :https://sumit-arora.medium.com/audio-steganography-the-art-of-hiding-secrets-within-earshot-part-2-of-2-c76b1be719b3
     @staticmethod
     def encode_audio(audio_path, msg, lsb, output_dir):
         """
@@ -233,10 +223,6 @@ class Steganography:
         secretBits = ''.join([bin(ord(eachChar)).lstrip('0b').rjust(8,'0') for eachChar in msg])
         lenOfSecretBits = len(secretBits)
         
-        # Check if message is too long for audio
-        # if len(secretBits) > (len(frame_bytes) * 8):
-        #     return {"status": False, "message": "The message is too long for the audio file"}
-        
         # Encode payload into cover frame
         for i in range(0, lenOfSecretBits, lsb):
             byte = frame_bytes[i//lsb]
@@ -252,12 +238,11 @@ class Steganography:
                     positionedReplacementBit = bit << bit_index
                     # OR the positioned replacement bit, to set the bit at the specified index of frame byte with the replacement bit
                     byte = clearedByte | positionedReplacementBit
-                    # byte = (byte & ~(1 << bit_index)) | (bit << bit_index)
             frame_bytes[i//lsb] = byte
         
         # Get the modified bytes
         frame_modified = bytes(frame_bytes)
-        output_path = os.path.join(output_dir + '/encoded_audio.' + fileExt)
+        output_path = os.path.join(output_dir, 'encoded_audio.' + fileExt)
         # Write bytes to a new wave audio file
         with wave.open(output_path, 'wb') as fd:
             fd.setparams(song.getparams())
@@ -281,8 +266,6 @@ class Steganography:
         Decode the hidden message from an audio file
         """
         try:
-            # Use wave package (native to Python) for reading the received audio file
-            import wave
             song = wave.open(audio_path, mode='rb')
             # Convert audio to byte array
             frame_bytes = bytearray(list(song.readframes(song.getnframes())))
@@ -295,9 +278,6 @@ class Steganography:
                 byte = byte & mask
                 bin = format(byte, 'b').rjust(lsb, '0')
                 payload_bin += bin
-                # if payload_bin[-8:] == "00111101": # stop_char '=' = 00111101
-                #     payload_bin = payload_bin[:-8]
-                #     break
             
             # Convert binary payload to text
             payload = ''
@@ -305,7 +285,7 @@ class Steganography:
                 byte = payload_bin[i:i+8]
                 if len(byte) == 8:
                     char = chr(int(byte, 2))
-                    if char is "=": # stop code reached
+                    if char == "=": # stop code reached
                         break
                     else:
                         payload += char
@@ -373,19 +353,6 @@ class Steganography:
 
         return {"status": True, "message": "Message encoded successfully"}
 
-
-    # @staticmethod        
-    # def divide_payload(payload, num_parts):
-    #     # This function should divide the payload into num_parts parts
-    #     # not implmenting for now
-    #     pass
-
-    # @staticmethod
-    # def encode_frame(frame, payload_part, lsb):
-    #     # This function should encode payload_part into frame using lsb steganography
-    #     # not implementing for now
-    #     pass
-
     @staticmethod
     def decode_gif(gif_path, lsb):
         try:
@@ -441,119 +408,141 @@ class Steganography:
         except Exception as e:
             return {"status": False, "message": str(e)}
 
-
         
     @staticmethod
     def getMask(lsb):
-        match(lsb):
-            case 1:
-                return 1
-            case 2:
-                return 3
-            case 3:
-                return 7
-            case 4:
-                return 15
-            case 5:
-                return 31
-            case 6:
-                return 63
-            case 7:
-                return 127
-            case 8:
-                return 255
-            
-    @staticmethod
-    def encode_video(video_path, msg, lsb, output_dir):
-        stop_code = '\x00'
-        msg += stop_code
-        binary_msg = ''.join(format(ord(i), '08b') for i in msg)
-        msg_len = len(binary_msg)
-
-        clip = VideoFileClip(video_path)
-        frames = [frame for frame in clip.iter_frames()]
-        total_pixels = sum(frame.shape[0] * frame.shape[1] for frame in frames)
-        max_payload_bits = total_pixels * 3 * lsb
-
-        if msg_len > max_payload_bits:
-            return {"status": False, "message": "Message too long to fit in video"}
-
-        idx = 0
-        mask = Steganography.getMask(lsb)
-        clear_mask = ~mask & 0xFF  # Clear the LSBs
-
-        for frame in frames:
-            frame = frame.copy()  # Make a writable copy
-            h, w, _ = frame.shape
-            for y in range(h):
-                for x in range(w):
-                    if idx < msg_len:
-                        pixel = list(frame[y, x])
-                        for i in range(3):  # RGB channels
-                            if idx < msg_len:
-                                pixel[i] &= clear_mask
-                                bits_to_embed = binary_msg[idx:idx+lsb].ljust(lsb, '0')
-                                pixel[i] |= int(bits_to_embed, 2)
-                                idx += lsb
-                        frame[y, x] = tuple(pixel)
-                    if idx >= msg_len:
-                        break
-                if idx >= msg_len:
-                    break
-            if idx >= msg_len:
-                break
-
-        def make_frame(t):
-            return frames[int(clip.fps * t)]
-
-        new_clip = VideoClip(make_frame, duration=clip.duration)
-        new_clip.set_audio(clip.audio)
-        output_path = os.path.join(output_dir, 'stego_video.mp4')
-        new_clip.fps = clip.fps
-        new_clip.write_videofile(output_path, codec='libx264')
-
-        return {"status": True, "message": "Message encoded successfully"}
+        return (1 << lsb) - 1
     
-    @staticmethod
-    def decode_video(video_path, lsb):
-        clip = VideoFileClip(video_path)
-        frames = [frame for frame in clip.iter_frames()]
-
-        msg_bin = ""
-        mask = Steganography.getMask(lsb)
-
-        for frame in frames:
-            h, w, _ = frame.shape
-            for y in range(h):
-                for x in range(w):
-                    pixel = frame[y, x]
-                    for i in range(3):  # RGB channels
-                        msg_bin += format(pixel[i] & mask, '0' + str(lsb) + 'b')
-                        if len(msg_bin) >= 8 and msg_bin[-8:] == format(ord('\x00'), '08b'):
-                            break
-                    else:
-                        continue
-                    break
-                else:
-                    continue
-                break
-            else:
-                continue
-            break
-
-        decoded_msg = ''
-        for i in range(0, len(msg_bin), 8):
-            byte = msg_bin[i:i+8]
-            if len(byte) == 8:
-                char = chr(int(byte, 2))
-                if char == '\x00':
-                    break
-                decoded_msg += char
-
-        return {"status": True, "message": decoded_msg}
-
+    def encode_steganography_video(self, path_to_cover_video, payload_text, num_lsb, output_directory):
+        try:
+            print("Initiating video encoding...")
+            try:
+                number_of_lsb = int(num_lsb)
+            except ValueError:
+                raise ValueError(f"num_lsb should be an integer, got: {num_lsb}")
+            print(f"Encoding with {number_of_lsb} LSBs")
     
+            self.extract_frames_from_video(path_to_cover_video)
+    
+            temporary_folder = "./temporary/"
+            frame_files = sorted([file for file in os.listdir(temporary_folder) if file.endswith('.png')], key=lambda file: int(file.split('.')[0]))
+    
+            payload_bits = ''.join([format(ord(char), '08b') for char in payload_text])
+            payload_bits += '00000000' * 8  # Adding 8 null bytes to signify the end of the message
+            bit_counter = 0
+    
+            total_frames = len(frame_files)
+            for frame_index, frame_file in enumerate(frame_files):
+                frame = cv2.imread(os.path.join(temporary_folder, frame_file))
+                if bit_counter >= len(payload_bits):
+                    break  # Stop encoding if all payload bits are encoded
+                for row in range(frame.shape[0]):
+                    for col in range(frame.shape[1]):
+                        for channel in range(3):  # Iterate over the BGR channels
+                            if bit_counter < len(payload_bits):
+                                frame[row, col, channel] = (frame[row, col, channel] & ~((1 << num_lsb) - 1)) | int(payload_bits[bit_counter:bit_counter + num_lsb], 2)
+                                bit_counter += num_lsb
+    
+                cv2.imwrite(os.path.join(temporary_folder, frame_file), frame)
+                print(f"\rProcessed frame {total_frames} of {total_frames}", end="")
+    
+            frames_per_second = VideoFileClip(path_to_cover_video).fps
+    
+            print("\nExtracting audio...")
+            audio_extraction_command = f'ffmpeg -i "{path_to_cover_video}" -q:a 0 -map a temporary/audio.mp3 -y -loglevel error'
+            audio_extraction_result = os.system(audio_extraction_command)
+            if audio_extraction_result != 0:
+                print(f"Error extracting audio with command: {audio_extraction_command}")
+                return {"status": False, "message": "Error extracting audio from the video"}
+    
+            steganography_video_path = os.path.join(output_directory, os.path.basename(path_to_cover_video).split('.')[0] + '_stego.mp4')
+            print(f"Stego video path: {steganography_video_path}")
+    
+            print("Combining new video and audio...")
+            combine_video_command = f'ffmpeg -framerate {frames_per_second} -i temporary/%d.png -codec copy -y temporary/video-only.mp4 -loglevel error'
+            combine_video_result = os.system(combine_video_command)
+            if combine_video_result != 0 or not os.path.exists('temporary/video-only.mp4'):
+                print(f"Error combining video with command: {combine_video_command}")
+                return {"status": False, "message": "Error combining video frames"}
+    
+            combine_audio_command = f'ffmpeg -i temporary/video-only.mp4 -i temporary/audio.mp3 -codec copy -y "{steganography_video_path}" -loglevel error'
+            combine_audio_result = os.system(combine_audio_command)
+            if combine_audio_result != 0 or not os.path.exists(steganography_video_path):
+                print(f"Error combining audio with command: {combine_audio_command}")
+                return {"status": False, "message": "Error combining audio with video"}
+    
+            print("Deleting temporary folder...")
+            if os.path.exists("./temporary"):
+                try:
+                    shutil.rmtree("./temporary", onerror=self.change_file_permissions)
+                    print("Temporary folder deleted successfully.")
+                except OSError as e:
+                    print(f"Error: {e.strerror} : {e.filename}")
+    
+            print("Encoding completed!")
+            return {"status": True, "message": f"Stego video created successfully at {steganography_video_path}"}
+    
+        except Exception as error:
+            return {"status": False, "message": f"Error encoding video: {str(error)}"}
 
+    def change_file_permissions(self, operation, file_path, _):
+        os.chmod(file_path, stat.S_IWRITE)
+        operation(file_path)
 
+    def extract_frames_from_video(self, path_to_video):
+        if not os.path.exists("./temporary"):
+            os.makedirs("./temporary")
+        temporary_folder = "./temporary/"
+        video_clip = VideoFileClip(path_to_video)
+        for frame_number, frame in enumerate(video_clip.iter_frames()):
+            print(f"Processing frames... (Frame {frame_number})")
+            image = Image.fromarray(frame, 'RGB')
+            image.save(f'{temporary_folder}{frame_number}.png')
 
-
+    def decode_steganography_video(self, path_to_steganography_video, num_lsb):
+        try:
+            print("Initiating video decoding...")
+            number_of_lsb = int(num_lsb)
+            print(f"Decoding with {number_of_lsb} LSBs")
+    
+            self.extract_frames_from_video(path_to_steganography_video)
+    
+            temporary_folder = "./temporary/"
+            frame_files = sorted([file for file in os.listdir(temporary_folder) if file.endswith('.png')], key=lambda file: int(file.split('.')[0]))
+    
+            payload_bits = ''
+    
+            total_frames = len(frame_files)
+            for frame_file in frame_files:
+                frame = cv2.imread(os.path.join(temporary_folder, frame_file))
+                for row in range(frame.shape[0]):
+                    for col in range(frame.shape[1]):
+                        for channel in range(3):  # Iterate over the BGR channels
+                            bits = format(frame[row, col, channel] & ((1 << num_lsb) - 1), f'0{num_lsb}b')
+                            payload_bits += bits
+                            if payload_bits.endswith('00000000' * 8):
+                                decoded_message = ''.join([chr(int(payload_bits[i:i + 8], 2)) for i in range(0, len(payload_bits) - 64, 8)])
+                                if os.path.exists("./temporary"):
+                                    try:
+                                        shutil.rmtree("./temporary", onerror=self.change_file_permissions)
+                                        print("Temporary folder deleted successfully.")
+                                    except OSError as error:
+                                        print(f"Error: {error.strerror} : {error.filename}")
+                                with open("decoded_message.txt", "w") as file:
+                                    file.write(decoded_message)
+                                print("Decoding completed!")
+                                return {"status": True, "message": "Check decoded_message.txt for the decoded message."}
+    
+            print(f"\rProcessed frame {total_frames} / {total_frames}")
+    
+            if os.path.exists("./temporary"):
+                try:
+                    shutil.rmtree("./temporary", onerror=self.change_file_permissions)
+                    print("\nTemporary folder deleted successfully.")
+                except OSError as error:
+                    print(f"Error: {error.strerror} : {error.filename}")
+    
+            return ''
+    
+        except Exception as error:
+            return {"status": False, "message": f"Error decoding video: {str(error)}"}
