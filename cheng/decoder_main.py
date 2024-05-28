@@ -76,6 +76,7 @@ class FileDropBox(QLabel):
                 content = file.read(1000)
             if len(content) == 1000:
                 content += '...'
+            self.preview_stack.setCurrentIndex(0)
             self.preview_stack.currentWidget().setText(content)
 
     def handle_error(self):
@@ -151,12 +152,17 @@ def window():
         lsb = int(lsbComboBox.currentText())
 
         try:
-            decoder = Steganography.decode(stegoFilePath, lsb)
+            decoder = Steganography()
+            if stegoFilePath.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+                result = decoder.decode_steganography_video(stegoFilePath, lsb)
+            else:
+                result = decoder.decode(stegoFilePath, lsb)
+
             msgBox = QMessageBox(win)
-            msgBox.setText(decoder.get("message"))
+            msgBox.setText(result.get("message"))
             msgBox.setStyleSheet("border: 0px; padding: 10px; height: 100px; width: 300px;")
             
-            if decoder.get("status") is False:
+            if result.get("status") is False:
                 msgBox.setIcon(QMessageBox.Warning)
                 msgBox.setWindowTitle("Error")
             else:
