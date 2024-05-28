@@ -1,11 +1,12 @@
-from PyQt5.QtWidgets import QFrame, QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QLabel, QFileDialog, QMessageBox, QMenu, QMenuBar, QAction, QComboBox, QStackedWidget
-from PyQt5.QtCore import Qt, pyqtSignal, QUrl
+from PyQt5.QtWidgets import (QFrame, QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, 
+                             QLabel, QFileDialog, QMessageBox, QComboBox, QStackedWidget)
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QIcon, QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PIL import Image, ImageTk
-from steganography import Steganography
+import os
 import vlc
+from steganography import Steganography
 
 class FileDropBox(QLabel):
     def __init__(self, valid_extensions, preview_stack, *args, **kwargs):
@@ -34,7 +35,7 @@ class FileDropBox(QLabel):
             url = event.mimeData().urls()[0]
             file_path = url.toLocalFile()
             if file_path is None:
-                self.preview_label.clear()
+                self.preview_stack.setCurrentWidget(QLabel("Cover File Preview"))
                 return
             if file_path.lower().endswith(tuple(self.valid_extensions)):
                 self.setText(file_path)
@@ -92,7 +93,6 @@ class FileDropBox(QLabel):
             msgBox.setStyleSheet("border: 0px;")
             msgBox.exec_()
 
-
 def window():
     
     global stegoFilePath, payloadFilePath, coverFilePath, lsb
@@ -105,23 +105,6 @@ def window():
     win = QMainWindow()
     win.setWindowTitle("LSB Steganography Encoder")
     win.resize(600, 400)
-    
-    # # Create a menu bar
-    # menuBar = QMenuBar()
-    # menuBar.setStyleSheet("background-color: #797979;")
-
-    # # Encode Page
-    # fileAction = QAction("Encode", win)
-    # fileAction.triggered.connect(lambda: print("Encode action triggered"))
-    # menuBar.addAction(fileAction)
-    
-    # # Decode Page
-    # decodeAction = QAction("Decode", win)
-    # decodeAction.triggered.connect(lambda: print("Decode action triggered"))
-    # menuBar.addAction(decodeAction)
-    
-    # # Set the menu bar of the window
-    # win.setMenuBar(menuBar)
 
     # Main Window Widget
     widget = QWidget()
@@ -155,13 +138,13 @@ def window():
     layout.addWidget(plusIcon)
     
     # Payload File Drop Box
-    coverLabel = QLabel("Payload File:")
-    coverLabel.setStyleSheet("margin-left: 10px;font-style: italic;")
-    layout.addWidget(coverLabel)
+    payloadLabel = QLabel("Payload File:")
+    payloadLabel.setStyleSheet("margin-left: 10px;font-style: italic;")
+    layout.addWidget(payloadLabel)
     
     payloadDropBoxLayout = QHBoxLayout()
     payloadPreviewStack = QStackedWidget()
-    payloadPreviewStack.addWidget(QLabel("Cover File Preview"))  # Add QLabel for images
+    payloadPreviewStack.addWidget(QLabel("Payload File Preview"))  # Add QLabel for text files
     payloadDropBox = FileDropBox(['.txt'], payloadPreviewStack)
     payloadDropBoxLayout.addWidget(payloadDropBox)
     payloadPreviewStack.setStyleSheet("margin-left: 80px;height: 100px;width: 100px;")
@@ -242,24 +225,34 @@ def window():
         payloadFilePath = payloadDropBox.text()
         lsb = int(lsbComboBox.currentText())
         output_dir = dirButton.text()
-            
+        
+        print(f"Cover File Path: {coverFilePath}")
+        print(f"Payload File Path: {payloadFilePath}")
+        print(f"LSB: {lsb}")
+        print(f"Output Directory: {output_dir}")
+        
         with open(payloadFilePath, 'r') as file:
             payload = file.read()
             
-        encoder = Steganography.encode(coverFilePath, payload, lsb, output_dir)
+        encoder = Steganography()
+        if coverFilePath.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            result = encoder.encode_steganography_video(coverFilePath, payload, lsb, output_dir)
+        else:
+            result = encoder.encode(coverFilePath, payload, lsb, output_dir)
         
         msgBox = QMessageBox(win)
-        msgBox.setText(encoder.get("message"))
+        msgBox.setText(result.get("message"))
         msgBox.setStyleSheet("border: 0px;")
         
-        if encoder.get("status") is False:
+        if result.get("status") is False:
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle("Error")
         else:
             msgBox.setIcon(QMessageBox.Information)
             msgBox.setWindowTitle("Success")
-        
+
         msgBox.exec_()
+
         
         ## What to do next?
 
@@ -268,15 +261,6 @@ def window():
     button.setStyleSheet("margin-left: 10px;height: 40px;margin-top: 30px;font-weight: bold;font-size: 15px;background-color: #8f88f7;")
     layout.addWidget(button)
     button.clicked.connect(encode)
-
-    # Down Arrow Icon
-    downArrowIcon = QLabel()
-    downArrowmap = QPixmap("./img/down-arrow.png")
-    downArrowmap = downArrowmap.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-    downArrowIcon.setPixmap(downArrowmap)
-    downArrowIcon.setStyleSheet("margin: 20px;padding-left: 220px;")
-    layout.addWidget(downArrowIcon)
-    downArrowIcon.hide() # hide the arrow first
 
     scroll = QScrollArea()
     scroll.setWidget(widget)
