@@ -413,6 +413,7 @@ class Steganography:
     def getMask(lsb):
         return (1 << lsb) - 1
     
+    @staticmethod
     def encode_steganography_video(path_to_cover_video, payload_text, num_lsb, output_directory):
         try:
             print("Initiating video encoding...")
@@ -474,7 +475,7 @@ class Steganography:
             print("Deleting temporary folder...")
             if os.path.exists("./temporary"):
                 try:
-                    shutil.rmtree("./temporary", onerror=self.change_file_permissions)
+                    shutil.rmtree("./temporary", onerror=Steganography.change_file_permissions)
                     print("Temporary folder deleted successfully.")
                 except OSError as e:
                     print(f"Error: {e.strerror} : {e.filename}")
@@ -485,11 +486,13 @@ class Steganography:
         except Exception as error:
             return {"status": False, "message": f"Error encoding video: {str(error)}"}
 
-    def change_file_permissions(self, operation, file_path, _):
+    @staticmethod
+    def change_file_permissions(operation, file_path, _):
         os.chmod(file_path, stat.S_IWRITE)
         operation(file_path)
 
-    def extract_frames_from_video(self, path_to_video):
+    @staticmethod
+    def extract_frames_from_video(path_to_video):
         if not os.path.exists("./temporary"):
             os.makedirs("./temporary")
         temporary_folder = "./temporary/"
@@ -499,13 +502,14 @@ class Steganography:
             image = Image.fromarray(frame, 'RGB')
             image.save(f'{temporary_folder}{frame_number}.png')
 
-    def decode_steganography_video(self, path_to_steganography_video, num_lsb):
+    @staticmethod
+    def decode_steganography_video(path_to_steganography_video, num_lsb):
         try:
             print("Initiating video decoding...")
             number_of_lsb = int(num_lsb)
             print(f"Decoding with {number_of_lsb} LSBs")
     
-            self.extract_frames_from_video(path_to_steganography_video)
+            Steganography.extract_frames_from_video(path_to_steganography_video)
     
             temporary_folder = "./temporary/"
             frame_files = sorted([file for file in os.listdir(temporary_folder) if file.endswith('.png')], key=lambda file: int(file.split('.')[0]))
@@ -524,7 +528,7 @@ class Steganography:
                                 decoded_message = ''.join([chr(int(payload_bits[i:i + 8], 2)) for i in range(0, len(payload_bits) - 64, 8)])
                                 if os.path.exists("./temporary"):
                                     try:
-                                        shutil.rmtree("./temporary", onerror=self.change_file_permissions)
+                                        shutil.rmtree("./temporary", onerror=Steganography.change_file_permissions)
                                         print("Temporary folder deleted successfully.")
                                     except OSError as error:
                                         print(f"Error: {error.strerror} : {error.filename}")
@@ -537,7 +541,7 @@ class Steganography:
     
             if os.path.exists("./temporary"):
                 try:
-                    shutil.rmtree("./temporary", onerror=self.change_file_permissions)
+                    shutil.rmtree("./temporary", onerror=Steganography.change_file_permissions)
                     print("\nTemporary folder deleted successfully.")
                 except OSError as error:
                     print(f"Error: {error.strerror} : {error.filename}")
