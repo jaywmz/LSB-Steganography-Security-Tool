@@ -285,7 +285,7 @@ class Steganography:
                 byte = payload_bin[i:i+8]
                 if len(byte) == 8:
                     char = chr(int(byte, 2))
-                    if char == "=": # stop code reached
+                    if char.__eq__("="): # stop code reached
                         break
                     else:
                         payload += char
@@ -450,7 +450,7 @@ class Steganography:
             frames_per_second = VideoFileClip(path_to_cover_video).fps
     
             print("\nExtracting audio...")
-            audio_extraction_command = f'ffmpeg -i "{path_to_cover_video}" -q:a 0 -map a temporary/audio.mp3 -y -loglevel error'
+            audio_extraction_command = f'ffmpeg\\bin\\ffmpeg -i "{path_to_cover_video}" -q:a 0 -map a temporary/audio.mp3 -y -loglevel error'
             audio_extraction_result = os.system(audio_extraction_command)
             if audio_extraction_result != 0:
                 print(f"Error extracting audio with command: {audio_extraction_command}")
@@ -460,13 +460,13 @@ class Steganography:
             print(f"Stego video path: {steganography_video_path}")
     
             print("Combining new video and audio...")
-            combine_video_command = f'ffmpeg -framerate {frames_per_second} -i temporary/%d.png -codec copy -y temporary/video-only.mp4 -loglevel error'
+            combine_video_command = f'ffmpeg\\bin\\ffmpeg -framerate {frames_per_second} -i temporary/%d.png -codec copy -y temporary/video-only.mp4 -loglevel error'
             combine_video_result = os.system(combine_video_command)
             if combine_video_result != 0 or not os.path.exists('temporary/video-only.mp4'):
                 print(f"Error combining video with command: {combine_video_command}")
                 return {"status": False, "message": "Error combining video frames"}
     
-            combine_audio_command = f'ffmpeg -i temporary/video-only.mp4 -i temporary/audio.mp3 -codec copy -y "{steganography_video_path}" -loglevel error'
+            combine_audio_command = f'ffmpeg\\bin\\ffmpeg -i temporary/video-only.mp4 -i temporary/audio.mp3 -codec copy -y "{steganography_video_path}" -loglevel error'
             combine_audio_result = os.system(combine_audio_command)
             if combine_audio_result != 0 or not os.path.exists(steganography_video_path):
                 print(f"Error combining audio with command: {combine_audio_command}")
