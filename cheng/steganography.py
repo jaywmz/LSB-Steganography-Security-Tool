@@ -35,7 +35,7 @@ class Steganography:
         
         elif input_path.endswith(('.mp4', '.avi', '.mov', '.mkv')):
             print("Encoding message into video...")
-            return Steganography.encode_video(input_path, msg, lsb, output_dir)
+            return Steganography.encode_steganography_video(input_path, msg, lsb, output_dir)
     
     
     @staticmethod
@@ -60,7 +60,7 @@ class Steganography:
         
         elif input_path.endswith(('.mp4', '.avi', '.mov', '.mkv')):
             print("Decoding message from video...")
-            return Steganography.decode_video(input_path, lsb)
+            return Steganography.decode_steganography_video(input_path, lsb)
     
     
     @staticmethod

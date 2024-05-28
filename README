@@ -5,9 +5,9 @@ Prerequisites
 Before you begin, ensure you have met the following requirements:
 
 You have installed Python 3.6 or later.
-You have installed the following Python libraries: tkinter, PIL, numpy, and tkinterdnd2.
+You have installed the following Python libraries: tkinter, PIL, numpy, opencv, and tkinterdnd2.
 You can install the necessary libraries with pip:
-pip install pillow numpy tkinterdnd2
+    pip install pillow numpy tkinterdnd2 opencv-python
 
 Install FFmpeg on Windows:
 FFmpeg is required for handling video and audio encoding/decoding. Follow these steps to install FFmpeg on your Windows machine.

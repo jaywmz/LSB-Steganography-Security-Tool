@@ -235,10 +235,7 @@ def window():
             payload = file.read()
             
         encoder = Steganography()
-        if coverFilePath.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
-            result = encoder.encode_steganography_video(coverFilePath, payload, lsb, output_dir)
-        else:
-            result = encoder.encode(coverFilePath, payload, lsb, output_dir)
+        result = encoder.encode(coverFilePath, payload, lsb, output_dir)
         
         msgBox = QMessageBox(win)
         msgBox.setText(result.get("message"))
