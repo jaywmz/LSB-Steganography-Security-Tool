@@ -413,7 +413,7 @@ class Steganography:
     def getMask(lsb):
         return (1 << lsb) - 1
     
-    def encode_steganography_video(self, path_to_cover_video, payload_text, num_lsb, output_directory):
+    def encode_steganography_video(path_to_cover_video, payload_text, num_lsb, output_directory):
         try:
             print("Initiating video encoding...")
             try:
@@ -422,7 +422,7 @@ class Steganography:
                 raise ValueError(f"num_lsb should be an integer, got: {num_lsb}")
             print(f"Encoding with {number_of_lsb} LSBs")
     
-            self.extract_frames_from_video(path_to_cover_video)
+            Steganography.extract_frames_from_video(path_to_cover_video)
     
             temporary_folder = "./temporary/"
             frame_files = sorted([file for file in os.listdir(temporary_folder) if file.endswith('.png')], key=lambda file: int(file.split('.')[0]))
