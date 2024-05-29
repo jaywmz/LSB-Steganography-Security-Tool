@@ -102,7 +102,7 @@ class Steganography:
 
         for row in range(height):
             for col in range(width):
-                r, g, b, a = img.getpixel((col, row))
+                r, g, b = img.getpixel((col, row))
                 
                 # clear LSBs 
                 r &= mask
@@ -135,7 +135,7 @@ class Steganography:
                 if index >= len_binary_msg:
                     break
                 
-                encoded.putpixel((col, row), (r, g, b, a))
+                encoded.putpixel((col, row), (r, g, b))
                 
         if isinstance(encoded, Image.Image):
             img_ext = img_path.split('.')
@@ -145,7 +145,7 @@ class Steganography:
                 os.startfile(output_path)
             elif os.name == 'posix':
                 subprocess.run(['open', output_path])
-            return {"status": True, "message": "Message encoded successfully"}
+            return {"status": True, "message": "Message encoded successfully", "output_file_path": output_path}
         else:
             return {"status": False, "message": "Error encoding message into image"}
     
@@ -168,7 +168,7 @@ class Steganography:
             
             for row in range(height):
                 for col in range(width):
-                    r, g, b, a  = img.getpixel((col, row))
+                    r, g, b = img.getpixel((col, row))
                     
                     # Extract the bits of the message
                     r &= mask
@@ -253,7 +253,7 @@ class Steganography:
         try:
             with wave.open(output_path, 'rb') as fd:
                 os.startfile(output_path)
-                return {"status": True, "message": "Audio encoded successfully"}
+                return {"status": True, "message": "Audio encoded successfully", "output_file_path": output_path}
         except FileNotFoundError:
             return {"status": False, "message": "Error creating encoded audio file"}
         except wave.Error:
@@ -351,7 +351,7 @@ class Steganography:
         elif os.name == 'posix':
             subprocess.run(['open', output_path])
 
-        return {"status": True, "message": "Message encoded successfully"}
+        return {"status": True, "message": "Message encoded successfully", "output_file_path": output_path}
 
     @staticmethod
     def decode_gif(gif_path, lsb):
@@ -480,7 +480,7 @@ class Steganography:
                     print(f"Error: {e.strerror} : {e.filename}")
     
             print("Encoding completed!")
-            return {"status": True, "message": f"Stego video created successfully at {steganography_video_path}"}
+            return {"status": True, "message": f"Stego video created successfully at {steganography_video_path}", "output_file_path": steganography_video_path}
     
         except Exception as error:
             return {"status": False, "message": f"Error encoding video: {str(error)}"}
