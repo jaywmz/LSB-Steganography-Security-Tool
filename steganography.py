@@ -68,18 +68,17 @@ class Steganography:
         """
         Use the LSBs of the pixels to encode the message into the image
         """
-        fileExt = img_path.split('.')[-1]     
+        # fileExt = img_path.split('.')[-1]     
            
-        if fileExt.lower() == 'gif':
-            img = Image.open(img_path).convert("RGB")
-        else:   
-            img = Image.open(img_path)
-
+        # if fileExt.lower() == 'gif':
+        #     img = Image.open(img_path).convert("RGB")
+        # else:   
+        img = Image.open(img_path).convert("RGB")
         width, height = img.size
         stop_code = '\x00'
         max_payload_char = math.floor((width * height * 3 * lsb) / 8) - len(stop_code)
         print("Maximum number of payload characters for the current image: " + str(max_payload_char))
-        msg += stop_code # add a stopping null character, one char space should be reserved for stopping code
+        msg += stop_code    # add a stopping null character, one char space should be reserved for stopping code
         length = len(msg)
         print(msg)
         if length > max_payload_char:
@@ -99,44 +98,32 @@ class Steganography:
 
         binary_msg = ''.join([format(ord(i), '08b') for i in msg])  # Convert the message to binary
         len_binary_msg = len(binary_msg)
+        
+        end = False
 
         for row in range(height):
             for col in range(width):
-                r, g, b = img.getpixel((col, row))
-                
-                # clear LSBs 
-                r &= mask
-                g &= mask
-                b &= mask
-
-                # Add the bits of the message
-                if index < len_binary_msg:
-                    secretBits = binary_msg[index:index+lsb]
-                    # if message not divisible by lsb, last character bits misalign, need to pad 0s on the right to width of lsb
-                    if len(secretBits) < lsb:
-                        secretBits = secretBits.ljust(lsb, '0')
-                    secretBitsInt = int(secretBits, 2)
-                    r = r | secretBitsInt
-                    index += lsb
-                if index < len_binary_msg:
-                    secretBits = binary_msg[index:index+lsb]
-                    if len(secretBits) < lsb:
-                        secretBits = secretBits.ljust(lsb, '0')
-                    secretBitsInt = int(secretBits, 2)
-                    g = g | secretBitsInt
-                    index += lsb
-                if index < len_binary_msg:
-                    secretBits = binary_msg[index:index+lsb]
-                    if len(secretBits) < lsb:
-                        secretBits = secretBits.ljust(lsb, '0')
-                    secretBitsInt = int(secretBits, 2)
-                    b = b | secretBitsInt
-                    index += lsb
-                if index >= len_binary_msg:
+                pixel = img.getpixel((col, row))
+                pixel = list(pixel)
+                for i in range(len(pixel)):
+                    if index < len_binary_msg:
+                        secretBits = binary_msg[index:index+lsb]
+                        # if message not divisible by lsb, last character bits misalign, need to pad 0s on the right to width of lsb
+                        if len(secretBits) < lsb:
+                            secretBits = secretBits.ljust(lsb, '0')
+                        secretBitsInt = int(secretBits, 2)
+                        pixel[i] &= mask
+                        pixel[i] |= secretBitsInt
+                        index += lsb
+                    else:
+                        end = True
+                        break
+                encoded.putpixel((col, row), tuple(pixel))
+                if end is True:
                     break
-                
-                encoded.putpixel((col, row), (r, g, b))
-                
+            if end is True:
+                break
+            
         if isinstance(encoded, Image.Image):
             img_ext = img_path.split('.')
             output_path = os.path.join(output_dir, 'stego_image.' + img_ext[-1])
@@ -156,46 +143,47 @@ class Steganography:
         Use the LSB of the pixels to decode the message from the image
         """
         try:
-            fileExt = img_path.split('.')[-1]
-            if fileExt.lower() == 'gif':
-                img = Image.open(img_path).convert("RGB")
-            else:
-                img = Image.open(img_path)
+            # fileExt = img_path.split('.')[-1]
+            # if fileExt.lower() == 'gif':
+            #     img = Image.open(img_path).convert("RGB")
+            # else:
+            img = Image.open(img_path).convert("RGB")
             width, height = img.size
             msg_bin = ""
             
             mask = Steganography.getMask(lsb)
+            end = False
             
             for row in range(height):
                 for col in range(width):
-                    r, g, b = img.getpixel((col, row))
-                    
-                    # Extract the bits of the message
-                    r &= mask
-                    bin = format(r, 'b').rjust(lsb, '0')
-                    msg_bin += bin
-                    
-                    g &= mask
-                    bin = format(g, 'b').rjust(lsb,'0')
-                    msg_bin += bin
-                    
-                    b &= mask
-                    bin = format(b, 'b').rjust(lsb,'0')
-                    msg_bin += bin
+                    pixel = tuple()
+                    pixel = list(img.getpixel((col, row)))    # returns a tuple of r g b values of a pixel
+                    for color in pixel:
+                        color &= mask   # AND mask to get integer value of LSBs
+                        bin = format(color, 'b').rjust(lsb, '0')    # convert integer value to binary equivalent, left-padded with 0s to fit number of LSBs
+                        msg_bin += bin
+                        if msg_bin.endswith("00000000"):   # if end of binary value all 0s, means hit stop code of NULL (\x00)
+                            end = True
+                            break
+                    if end is True:
+                        break
+                if end is True:
+                    break
 
             # Convert the binary message to a string
             decoded_msg = ''
             for i in range(0, len(msg_bin), 8):
-                byte = msg_bin[i:i+8]
-                if len(byte) == 8:
-                    if int(byte, 2) == 0: # break if we hit a null character (stop code)
-                        break
-                    char = chr(int(byte, 2))
+                byte = msg_bin[i:i+8]   # gets a byte from msg_bin
+                if (len(byte) == 8) and (int(byte, 2) != 0):    # if binary value of byte is 0, means have hit stop code, stop converting
+                    char = chr(int(byte, 2))    # convert integer of binary value to unicode equivalent
                     decoded_msg += char
+                else: 
+                    break
 
             return {"status": True, "message": decoded_msg}
         except Exception as e:
             return {"status": False, "message": str(e)}
+    
     
     @staticmethod
     def encode_audio(audio_path, msg, lsb, output_dir):
@@ -352,6 +340,7 @@ class Steganography:
             subprocess.run(['open', output_path])
 
         return {"status": True, "message": "Message encoded successfully", "output_file_path": output_path}
+
 
     @staticmethod
     def decode_gif(gif_path, lsb):
