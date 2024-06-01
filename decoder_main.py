@@ -91,18 +91,13 @@ class FileDropBox(QLabel):
             msgBox.setStyleSheet("border: 0px;")
             msgBox.exec_()
 
-def window():
+def decoder_window():
     
     global stegoFilePath, payloadFilePath, coverFilePath, lsb
     stegoFilePath = ""
     payloadFilePath = ""
     coverFilePath = ""
     lsb = 0
-    
-    app = QApplication([])
-    win = QMainWindow()
-    win.setWindowTitle("LSB Steganography Decoder")
-    win.resize(600, 400)
     
     # Main Window Widget
     widget = QWidget()
@@ -140,7 +135,7 @@ def window():
     def decode():
         
         if stegoDropBox.text() == "Drag and drop a file here \nor \nclick to select":
-            msgBox = QMessageBox(win)
+            msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle("Stego File Not Selected")
             msgBox.setText("Please select a stego file.")
@@ -158,7 +153,7 @@ def window():
             else:
                 result = decoder.decode(stegoFilePath, lsb)
 
-            msgBox = QMessageBox(win)
+            msgBox = QMessageBox()
             msgBox.setText(result.get("message"))
             msgBox.setStyleSheet("border: 0px; padding: 10px; height: 100px; width: 300px;")
             
@@ -171,7 +166,7 @@ def window():
             
             msgBox.exec_()
         except Exception as e:
-            msgBox = QMessageBox(win)
+            msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Critical)
             msgBox.setWindowTitle("Decoding Error")
             msgBox.setText(f"An error occurred while decoding: {str(e)}")
@@ -195,10 +190,8 @@ def window():
 
     scroll = QScrollArea()
     scroll.setWidget(widget)
-    win.setCentralWidget(scroll)
-
-    win.show()
-    app.exec_()
+    
+    return scroll
 
 if __name__ == '__main__':
-    window()
+    decoder_window()

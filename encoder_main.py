@@ -301,7 +301,7 @@ class PreviewWindow(QDialog):
         self.after_player.set_position(0.0)
         self.after_player.play()
     
-def window():
+def encoder_window():
     
     global stegoFilePath, payloadFilePath, coverFilePath, lsb
     stegoFilePath = ""
@@ -309,10 +309,10 @@ def window():
     coverFilePath = ""
     lsb = 0
     
-    app = QApplication([])
-    win = QMainWindow()
-    win.setWindowTitle("LSB Steganography Encoder")
-    win.resize(600, 750)
+    # app = QApplication([])
+    # win = QMainWindow()
+    # win.setWindowTitle("LSB Steganography Encoder")
+    # win.resize(600, 750)
 
     # Main Window Widget
     widget = QWidget()
@@ -405,7 +405,7 @@ def window():
     # Encode Function
     def encode():
         if coverDropBox.text() == "Drag and drop a file here \nor \nclick to select":
-            msgBox = QMessageBox(win)
+            msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle("Cover File Not Selected")
             msgBox.setText("Please select a cover file.")
@@ -413,7 +413,7 @@ def window():
             msgBox.exec_()
             return
         if payloadDropBox.text() == "Drag and drop a file here \nor \nclick to select":
-            msgBox = QMessageBox(win)
+            msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle("Payload File Not Selected")
             msgBox.setText("Please select a payload file.")
@@ -421,7 +421,7 @@ def window():
             msgBox.exec_()
             return
         if dirButton.text() == "Select Directory" or dirButton.text() == "":
-            msgBox = QMessageBox(win)
+            msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle("Output Directory Not Selected")
             msgBox.setText("Please select an output directory.")
@@ -448,7 +448,7 @@ def window():
         else:
             result = encoder.encode(coverFilePath, payload, lsb, output_dir)
         
-        msgBox = QMessageBox(win)
+        msgBox = QMessageBox()
         msgBox.setText(result.get("message"))
         msgBox.setStyleSheet("border: 0px;")
         
@@ -479,12 +479,10 @@ def window():
     
     scroll = QScrollArea()
     scroll.setWidget(widget)
-    win.setCentralWidget(scroll)
-
-    win.show()
-    app.exec_()
-
+    
+    return scroll
+    
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window()
+    encoder_window()
     sys.exit(app.exec_())
