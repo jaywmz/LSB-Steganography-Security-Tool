@@ -331,7 +331,7 @@ def encoder_window():
     coverDropBoxLayout = QHBoxLayout()
     coverPreviewStack = QStackedWidget()
     coverPreviewStack.addWidget(QLabel("Cover File Preview"))  # Add QLabel for images
-    coverDropBox = FileDropBox(['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.mp4', '.avi', '.mov', '.mkv', '.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'], coverPreviewStack)
+    coverDropBox = FileDropBox(['.*', '.png', '.jpg', '.jpeg', '.bmp', '.gif', '.mp4', '.avi', '.mov', '.mkv', '.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'], coverPreviewStack)
     coverDropBoxLayout.addWidget(coverDropBox)
     coverPreviewStack.setStyleSheet("margin-left: 80px;height: 100px;width: 100px;")
     coverDropBoxLayout.addWidget(coverPreviewStack)

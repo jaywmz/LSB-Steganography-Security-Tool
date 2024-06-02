@@ -13,7 +13,7 @@ def main():
     app = QApplication([])
     win = QMainWindow()
     win.setWindowTitle("LSB Steganography Tool")
-    win.resize(600, 400)
+    win.resize(600,800)
 
     tab_widget = QTabWidget()
 

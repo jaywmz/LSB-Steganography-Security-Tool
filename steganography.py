@@ -266,6 +266,8 @@ class Steganography:
                 byte = byte & mask
                 bin = format(byte, 'b').rjust(lsb, '0')
                 payload_bin += bin
+                if payload_bin.endswith("00111101"):   # if end of binary value all 0s, means hit stop code
+                    break
             
             # Convert binary payload to text
             payload = ''

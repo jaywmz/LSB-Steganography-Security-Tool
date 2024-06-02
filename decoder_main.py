@@ -116,7 +116,7 @@ def decoder_window():
     stegoDropBoxLayout = QHBoxLayout()
     stegoPreviewStack = QStackedWidget()
     stegoPreviewStack.addWidget(QLabel("Stego File Preview"))  # Add QLabel for images
-    stegoDropBox = FileDropBox(['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.mp4', '.avi', '.mov', '.mkv', '.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'], stegoPreviewStack)
+    stegoDropBox = FileDropBox(['.*', '.png', '.jpg', '.jpeg', '.bmp', '.gif', '.mp4', '.avi', '.mov', '.mkv', '.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'], stegoPreviewStack)
     stegoDropBoxLayout.addWidget(stegoDropBox)
     stegoPreviewStack.setStyleSheet("margin-left: 80px;height: 100px;width: 100px;")
     stegoDropBoxLayout.addWidget(stegoPreviewStack)
