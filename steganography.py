@@ -8,11 +8,14 @@ import math
 import cv2
 import shutil
 import stat
+import subprocess
+import platform
+import time
 
 class Steganography:
     
     @staticmethod
-    def encode(input_path, msg, lsb, output_dir):
+    def encode(input_path, msg, stop_code, lsb, output_dir):
         """
         Use the LSB of the pixels to encode the message into something
         """
@@ -23,7 +26,7 @@ class Steganography:
         
         if(input_path.endswith(('.png', '.jpg', '.jpeg', '.bmp'))):
             print("Encoding message into image...")
-            return Steganography.encode_image(input_path, msg, lsb, output_dir)
+            return Steganography.encode_image(input_path, msg, stop_code, lsb, output_dir)
                         
         elif(input_path.endswith(('.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'))):
             print("Encoding message into audio...")
@@ -35,11 +38,11 @@ class Steganography:
         
         elif input_path.endswith(('.mp4', '.avi', '.mov', '.mkv')):
             print("Encoding message into video...")
-            return Steganography.encode_video(input_path, msg, lsb, output_dir)
+            return Steganography.encode_video(input_path, msg, stop_code, lsb, output_dir)
     
     
     @staticmethod
-    def decode(input_path, lsb):
+    def decode(input_path, stop_code, lsb):
         """
         Use the LSB of the pixels to encode the message into something
         """
@@ -64,7 +67,7 @@ class Steganography:
     
     
     @staticmethod
-    def encode_image(img_path, msg, lsb, output_dir):
+    def encode_image(img_path, msg, stop_code, lsb, output_dir):
         """
         Use the LSBs of the pixels to encode the message into the image
         """
@@ -75,7 +78,6 @@ class Steganography:
         # else:   
         img = Image.open(img_path).convert("RGB")
         width, height = img.size
-        stop_code = '\x00'
         max_payload_char = math.floor((width * height * 3 * lsb) / 8) - len(stop_code)
         print("Maximum number of payload characters for the current image: " + str(max_payload_char))
         msg += stop_code    # add a stopping null character, one char space should be reserved for stopping code
@@ -132,7 +134,8 @@ class Steganography:
                 os.startfile(output_path)
             elif os.name == 'posix':
                 subprocess.run(['open', output_path])
-            return {"status": True, "message": "Message encoded successfully", "output_file_path": output_path}
+            
+            return {"status": True, "message": "Message encoded successfully"}
         else:
             return {"status": False, "message": "Error encoding message into image"}
     
@@ -240,7 +243,10 @@ class Steganography:
         # Handle the case where the output file is not created
         try:
             with wave.open(output_path, 'rb') as fd:
-                os.startfile(output_path)
+                if os.name == 'nt':
+                    os.startfile(output_path)
+                elif os.name == 'posix':
+                    subprocess.run(['open', output_path])
                 return {"status": True, "message": "Audio encoded successfully", "output_file_path": output_path}
         except FileNotFoundError:
             return {"status": False, "message": "Error creating encoded audio file"}
@@ -404,7 +410,7 @@ class Steganography:
     def getMask(lsb):
         return (1 << lsb) - 1
     
-    def encode_steganography_video(self, path_to_cover_video, payload_text, num_lsb, output_directory):
+    def encode_steganography_video(self, path_to_cover_video, payload_text, stop_code, num_lsb, output_directory):
         try:
             print("Initiating video encoding...")
             try:
@@ -413,13 +419,14 @@ class Steganography:
                 raise ValueError(f"num_lsb should be an integer, got: {num_lsb}")
             print(f"Encoding with {number_of_lsb} LSBs")
     
-            self.extract_frames_from_video(path_to_cover_video)
+            self.extract_frames_from_video_improve(path_to_cover_video)
     
             temporary_folder = "./temporary/"
             frame_files = sorted([file for file in os.listdir(temporary_folder) if file.endswith('.png')], key=lambda file: int(file.split('.')[0]))
     
+            # payload_text += stop_code  # Add a stop code to the payload
             payload_bits = ''.join([format(ord(char), '08b') for char in payload_text])
-            payload_bits += '00000000' * 8  # Adding 8 null bytes to signify the end of the message
+            payload_bits += stop_code # Adding 8 null bytes to signify the end of the message
             bit_counter = 0
     
             total_frames = len(frame_files)
@@ -481,6 +488,8 @@ class Steganography:
         operation(file_path)
 
     def extract_frames_from_video(self, path_to_video):
+        start_time = time.time()
+        
         if not os.path.exists("./temporary"):
             os.makedirs("./temporary")
         temporary_folder = "./temporary/"
@@ -489,14 +498,39 @@ class Steganography:
             print(f"Processing frames... (Frame {frame_number})")
             image = Image.fromarray(frame, 'RGB')
             image.save(f'{temporary_folder}{frame_number}.png')
+            
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Processing time using old method: {elapsed_time} seconds")
 
-    def decode_steganography_video(self, path_to_steganography_video, num_lsb):
+    def extract_frames_from_video_improve(self, path_to_video):
+        start_time = time.time()
+        
+        if not os.path.exists("./temporary"):
+            os.makedirs("./temporary")
+        temporary_folder = "./temporary/"
+        
+        video_capture = cv2.VideoCapture(path_to_video)
+        frame_count = 0
+        while True:
+            success, image = video_capture.read()
+            if not success:
+                break
+            print(f"Processing frames... (Frame {frame_count})")
+            cv2.imwrite(os.path.join(temporary_folder, f"{frame_count}.png"), image)     # save frame as PNG file
+            frame_count += 1
+        
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Processing time using new method: {elapsed_time} seconds")
+
+    def decode_steganography_video(self, path_to_steganography_video, stop_code, num_lsb):
         try:
             print("Initiating video decoding...")
             number_of_lsb = int(num_lsb)
             print(f"Decoding with {number_of_lsb} LSBs")
     
-            self.extract_frames_from_video(path_to_steganography_video)
+            self.extract_frames_from_video_improve(path_to_steganography_video)
     
             temporary_folder = "./temporary/"
             frame_files = sorted([file for file in os.listdir(temporary_folder) if file.endswith('.png')], key=lambda file: int(file.split('.')[0]))
@@ -511,7 +545,7 @@ class Steganography:
                         for channel in range(3):  # Iterate over the BGR channels
                             bits = format(frame[row, col, channel] & ((1 << num_lsb) - 1), f'0{num_lsb}b')
                             payload_bits += bits
-                            if payload_bits.endswith('00000000' * 8):
+                            if payload_bits.endswith(stop_code):
                                 decoded_message = ''.join([chr(int(payload_bits[i:i + 8], 2)) for i in range(0, len(payload_bits) - 64, 8)])
                                 if os.path.exists("./temporary"):
                                     try:

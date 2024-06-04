@@ -1,7 +1,8 @@
+import math
 from PyQt5.QtWidgets import (QFrame, QDialog, QApplication, QMainWindow, QPushButton, 
                              QSpacerItem, QSizePolicy, QVBoxLayout, QHBoxLayout, 
                              QWidget, QScrollArea, QLabel, QFileDialog, QMessageBox, 
-                             QComboBox, QStackedWidget)
+                             QComboBox, QStackedWidget, QProgressBar)
 from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QSize
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QMouseEvent, QIcon, QPixmap, QMovie
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
@@ -11,6 +12,7 @@ import vlc
 import sys
 import time
 from steganography import Steganography
+from PIL import Image
 
 class FileDropBox(QLabel):
     def __init__(self, valid_extensions, preview_stack, *args, **kwargs):
@@ -20,7 +22,7 @@ class FileDropBox(QLabel):
         self.valid_file_path = None
         
         # VLC player initialization
-        self.instance = vlc.Instance()
+        self.instance = vlc.Instance('--vout=macosx')
         self.player = self.instance.media_player_new()
         self.video_widget = QFrame()
         self.preview_stack.addWidget(self.video_widget)
@@ -105,6 +107,23 @@ class FileDropBox(QLabel):
             if fileName:
                 self.setText(fileName)
                 self.preview_file(fileName)
+    
+    def get_file_information(self, file_path, lsb):
+        if file_path is None:
+            return
+        if file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+            image = Image.open(file_path).convert("RGB")
+            width, height = image.size
+            stop_code = '\x00'
+            total_bits = width * height * 3 * 8
+            maximum_payload_characters = math.floor((width * height * 3 * lsb) / 8) - len(stop_code)
+            return {"total_bits": total_bits, "maximum_payload_characters": maximum_payload_characters}
+        elif file_path.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac')):
+            return
+        elif file_path.lower().endswith('.txt'):
+            return
+        else:
+            return
     
     def preview_file(self, file_path):
         if file_path is None:
@@ -444,9 +463,9 @@ def encoder_window():
             
         encoder = Steganography()
         if coverFilePath.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
-            result = encoder.encode_steganography_video(coverFilePath, payload, lsb, output_dir)
+            result = encoder.encode_steganography_video(coverFilePath, payload, '00000000' * 8, lsb, output_dir)
         else:
-            result = encoder.encode(coverFilePath, payload, lsb, output_dir)
+            result = encoder.encode(coverFilePath, payload, '00000000' * 8, lsb, output_dir)
         
         msgBox = QMessageBox()
         msgBox.setText(result.get("message"))

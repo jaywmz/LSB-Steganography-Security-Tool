@@ -149,9 +149,9 @@ def decoder_window():
         try:
             decoder = Steganography()
             if stegoFilePath.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
-                result = decoder.decode_steganography_video(stegoFilePath, lsb)
+                result = decoder.decode_steganography_video(stegoFilePath, '00000000' * 8, lsb)
             else:
-                result = decoder.decode(stegoFilePath, lsb)
+                result = decoder.decode(stegoFilePath, '00000000' * 8, lsb)
 
             msgBox = QMessageBox()
             msgBox.setText(result.get("message"))
