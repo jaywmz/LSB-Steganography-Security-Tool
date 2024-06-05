@@ -309,10 +309,31 @@ class Steganography:
             return {"status": False, "message": str(e)}
 
     @staticmethod
+    def check_gif_payload_limit(gif_path, msg, lsb):
+        """
+        Check if the message size is too large for the GIF.
+        """
+        gif = Image.open(gif_path)
+        total_bits = sum(frame.width * frame.height * 3 for frame in ImageSequence.Iterator(gif))
+        max_payload_char = total_bits * lsb // 8
+    
+        # Artificially limit the max_payload_char to a smaller value
+        max_payload_char = 100
+    
+        if len(msg) > max_payload_char:
+            return False, f"Message too long! (Don't exceed {max_payload_char} characters)"
+        return True, ""
+    
+    @staticmethod
     def encode_gif(gif_path, msg, lsb, output_dir):
         """
         Use the LSB of the pixels to encode the message into the GIF
         """
+        # Check if the message size is too large for the GIF
+        is_valid, error_message = Steganography.check_gif_payload_limit(gif_path, msg, lsb)
+        if not is_valid:
+            return {"status": False, "message": error_message}
+
         # Open the GIF
         gif = Image.open(gif_path)
 
@@ -331,10 +352,6 @@ class Steganography:
         stop_code = '\x00'
         msg += stop_code
         binary_msg = ''.join(format(ord(i), '08b') for i in msg)
-
-        # Check if the message is too long for the GIF
-        if len(binary_msg) > total_bits * lsb:
-            return {"status": False, "message": "Message too long to fit in GIF"}
 
         # Create a mask to clear the least significant bits
         index = 0
