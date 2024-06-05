@@ -213,23 +213,6 @@ class Steganography:
         # convert secret msg into binary string
         secretBits = ''.join([bin(ord(eachChar)).lstrip('0b').rjust(8,'0') for eachChar in msg])
         lenOfSecretBits = len(secretBits)
-        
-        # Encode payload into cover frame
-        # for i in range(0, lenOfSecretBits, lsb):
-        #     byte = frame_bytes[i//lsb]
-        #     for bit_index in range(lsb):
-        #         if (i + ((lsb-1)-bit_index)) < lenOfSecretBits:
-        #             # to get the replacement bit from secret bits at the index corresponding with the bit_index 
-        #             bit = int(secretBits[i + ((lsb-1)-bit_index)])
-        #             # create the mask to clear the bit at the specified bit_index, depending on how many LSBs selected
-        #             mask = ~(1 << bit_index)
-        #             # AND the mask, to clear the bit at the specific index
-        #             clearedByte = byte & mask
-        #             # move the replacement bit to specific index position
-        #             positionedReplacementBit = bit << bit_index
-        #             # OR the positioned replacement bit, to set the bit at the specified index of frame byte with the replacement bit
-        #             byte = clearedByte | positionedReplacementBit
-        #     frame_bytes[i//lsb] = byte
             
         mask = 0xFF << lsb  # Create a mask to clear the least significant bits
             
