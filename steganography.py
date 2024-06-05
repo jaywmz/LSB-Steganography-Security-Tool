@@ -135,7 +135,7 @@ class Steganography:
             elif os.name == 'posix':
                 subprocess.run(['open', output_path])
             
-            return {"status": True, "message": "Message encoded successfully"}
+            return {"status": True, "message": "Message encoded successfully into image", "output_file_path": output_path}
         else:
             return {"status": False, "message": "Error encoding message into image"}
     
