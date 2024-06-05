@@ -29,7 +29,7 @@ class Steganography:
         # Check the file type and call the appropriate encoding method
         if input_path.endswith(('.png', '.jpg', '.jpeg', '.bmp')):
             print("Encoding message into image...")
-            return Steganography.encode_image(input_path, msg, stop_code, lsb, output_dir)
+            return Steganography.encode_image(input_path, msg, lsb, output_dir)
 
         elif input_path.endswith(('.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac')):
             print("Encoding message into audio...")
@@ -72,10 +72,11 @@ class Steganography:
 
     # Method to encode a message into an image
     @staticmethod
-    def encode_image(img_path, msg, stop_code, lsb, output_dir):
+    def encode_image(img_path, msg, lsb, output_dir):
         """
         Use the LSBs of the pixels to encode the message into the image
         """
+        stop_code = "\x00"
         # Open the image and convert it to RGB
         img = Image.open(img_path).convert("RGB")
         width, height = img.size
@@ -232,7 +233,7 @@ class Steganography:
         # Encode the message into the audio samples
         index = 0
         for i in range(len(frame_bytes)):
-            if (index + (lsb - 1)) < lenOfSecretBits:
+            if index < lenOfSecretBits:
                 secretlsbs = secretBits[index:index + lsb]
                 if len(secretlsbs) < lsb:
                     secretlsbs = secretlsbs.ljust(lsb, '0')
@@ -284,7 +285,7 @@ class Steganography:
                 bin = format(byte, 'b').rjust(lsb, '0')
                 payload_bin += bin
                 # If the end of the message is reached, stop decoding
-                if payload_bin.endswith("00111101"):
+                if payload_bin.__contains__("00111101"):
                     break
 
             decoded_msg = ''
