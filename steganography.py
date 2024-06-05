@@ -193,8 +193,11 @@ class Steganography:
                     decoded_msg += char
                 else:
                     break
-
-            return {"status": True, "message": decoded_msg}
+            
+            with open("decoded_message.txt", "w") as file:
+                file.write(decoded_msg)
+            return {"status": True, "message": "Check decoded_message.txt for the decoded message."}
+            # return {"status": True, "message": decoded_msg}
         except Exception as e:
             return {"status": False, "message": str(e)}
 
@@ -284,8 +287,7 @@ class Steganography:
                 if payload_bin.endswith("00111101"):
                     break
 
-            # Convert the binary message to text
-            payload = ''
+            decoded_msg = ''
             for i in range(0, len(payload_bin), 8):
                 byte = payload_bin[i:i + 8]
                 if len(byte) == 8:
@@ -293,10 +295,15 @@ class Steganography:
                     if char == "=":
                         break
                     else:
-                        payload += char
+                        decoded_msg += char
 
             song.close()
-            return {"status": True, "message": payload}
+            
+            with open("decoded_message.txt", "w") as file:
+                file.write(decoded_msg)
+                
+            return {"status": True, "message": "Check decoded_message.txt for the decoded message."}
+            # return {"status": True, "message": payload}
         except Exception as e:
             return {"status": False, "message": str(e)}
 
@@ -433,8 +440,11 @@ class Steganography:
                     if char == '\x00':
                         break
                     decoded_msg += char
-
-            return {"status": True, "message": decoded_msg}
+                    
+            with open("decoded_message.txt", "w") as file:
+                file.write(decoded_msg)
+            return {"status": True, "message": "Check decoded_message.txt for the decoded message."}
+            # return {"status": True, "message": decoded_msg}
         except Exception as e:
             return {"status": False, "message": str(e)}
 
