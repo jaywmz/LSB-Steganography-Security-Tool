@@ -5,6 +5,7 @@ import vlc
 from PIL import Image
 from steganography import Steganography
 
+# Class for the file drop box
 class FileDropBox(QLabel):
     def __init__(self, valid_extensions, preview_stack, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -23,10 +24,12 @@ class FileDropBox(QLabel):
         self.setAcceptDrops(True)
         self.setMinimumSize(200, 100)
 
+    # Event handler for drag enter event
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
+    # Event handler for drop event
     def dropEvent(self, event: QDropEvent):
         if event.mimeData().hasUrls():
             url = event.mimeData().urls()[0]
@@ -47,6 +50,7 @@ class FileDropBox(QLabel):
                 msgBox.setStyleSheet("border: 0px;")
                 msgBox.exec_()
 
+    # Event handler for mouse press event
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.LeftButton:
             fileFilter = ";;".join([f"{ext.upper()} Files (*{ext})" for ext in self.valid_extensions])
@@ -55,6 +59,7 @@ class FileDropBox(QLabel):
                 self.setText(fileName)
                 self.preview_file(fileName)
     
+    # Function to preview the file
     def preview_file(self, file_path):
         if file_path is None:
             return
@@ -79,6 +84,7 @@ class FileDropBox(QLabel):
             self.preview_stack.setCurrentIndex(0)
             self.preview_stack.currentWidget().setText(content)
 
+    # Function to handle errors
     def handle_error(self):
         error = self.player.get_state()
         if error == vlc.State.Error:
@@ -91,6 +97,7 @@ class FileDropBox(QLabel):
             msgBox.setStyleSheet("border: 0px;")
             msgBox.exec_()
 
+# Function to create the decoder window
 def decoder_window():
     
     global stegoFilePath, payloadFilePath, coverFilePath, lsb
@@ -133,8 +140,9 @@ def decoder_window():
 
     # Decode Function
     def decode():
-        
+        # Check if a stego file has been selected
         if stegoDropBox.text() == "Drag and drop a file here \nor \nclick to select":
+            # Display a warning message if no stego file has been selected
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Warning)
             msgBox.setWindowTitle("Stego File Not Selected")
@@ -142,30 +150,40 @@ def decoder_window():
             msgBox.setStyleSheet("border: 0px;")
             msgBox.exec_()
             return
-        
+
+        # Get the path of the stego file and the number of LSBs
         stegoFilePath = stegoDropBox.text()
         lsb = int(lsbComboBox.currentText())
 
         try:
+            # Initialize the Steganography decoder
             decoder = Steganography()
+            # Check if the stego file is a video file
             if stegoFilePath.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+                # Decode the steganography from the video file
                 result = decoder.decode_steganography_video(stegoFilePath, '00000000' * 8, lsb)
             else:
+                # Decode the steganography from the file
                 result = decoder.decode(stegoFilePath, '00000000' * 8, lsb)
 
+            # Display the result of the decoding
             msgBox = QMessageBox()
             msgBox.setText(result.get("message"))
             msgBox.setStyleSheet("border: 0px; padding: 10px; height: 100px; width: 300px;")
-            
+
+            # Check if the decoding was successful
             if result.get("status") is False:
+                # Display an error message if the decoding was not successful
                 msgBox.setIcon(QMessageBox.Warning)
                 msgBox.setWindowTitle("Error")
             else:
+                # Display a success message if the decoding was successful
                 msgBox.setIcon(QMessageBox.Information)
                 msgBox.setWindowTitle("Success")
-            
+
             msgBox.exec_()
         except Exception as e:
+            # Display an error message if an exception occurred during decoding
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Critical)
             msgBox.setWindowTitle("Decoding Error")
@@ -173,13 +191,13 @@ def decoder_window():
             msgBox.setStyleSheet("border: 0px;")
             msgBox.exec_()
 
-    # Button above Down Arrow Icon
+    # Create a button for decoding
     button = QPushButton("Decode")
     button.setStyleSheet("margin-left: 10px;height: 40px;margin-top: 30px;font-weight: bold;font-size: 15px;background-color: #bc88f7;")
     layout.addWidget(button)
     button.clicked.connect(decode)
 
-    # Down Arrow Icon
+    # Create a down arrow icon
     downArrowIcon = QLabel()
     downArrowmap = QPixmap("./img/down-arrow.png")
     downArrowmap = downArrowmap.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -188,10 +206,12 @@ def decoder_window():
     layout.addWidget(downArrowIcon)
     downArrowIcon.hide() # hide the arrow first
 
+    # Create a scroll area for the widget
     scroll = QScrollArea()
     scroll.setWidget(widget)
-    
+
     return scroll
 
-if __name__ == '__main__':
-    decoder_window()
+    # Run the decoder window function if the script is run directly
+    if __name__ == '__main__':
+        decoder_window()
