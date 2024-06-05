@@ -215,21 +215,38 @@ class Steganography:
         lenOfSecretBits = len(secretBits)
         
         # Encode payload into cover frame
-        for i in range(0, lenOfSecretBits, lsb):
-            byte = frame_bytes[i//lsb]
-            for bit_index in range(lsb):
-                if (i + ((lsb-1)-bit_index)) < lenOfSecretBits:
-                    # to get the replacement bit from secret bits at the index corresponding with the bit_index 
-                    bit = int(secretBits[i + ((lsb-1)-bit_index)])
-                    # create the mask to clear the bit at the specified bit_index, depending on how many LSBs selected
-                    mask = ~(1 << bit_index)
-                    # AND the mask, to clear the bit at the specific index
-                    clearedByte = byte & mask
-                    # move the replacement bit to specific index position
-                    positionedReplacementBit = bit << bit_index
-                    # OR the positioned replacement bit, to set the bit at the specified index of frame byte with the replacement bit
-                    byte = clearedByte | positionedReplacementBit
-            frame_bytes[i//lsb] = byte
+        # for i in range(0, lenOfSecretBits, lsb):
+        #     byte = frame_bytes[i//lsb]
+        #     for bit_index in range(lsb):
+        #         if (i + ((lsb-1)-bit_index)) < lenOfSecretBits:
+        #             # to get the replacement bit from secret bits at the index corresponding with the bit_index 
+        #             bit = int(secretBits[i + ((lsb-1)-bit_index)])
+        #             # create the mask to clear the bit at the specified bit_index, depending on how many LSBs selected
+        #             mask = ~(1 << bit_index)
+        #             # AND the mask, to clear the bit at the specific index
+        #             clearedByte = byte & mask
+        #             # move the replacement bit to specific index position
+        #             positionedReplacementBit = bit << bit_index
+        #             # OR the positioned replacement bit, to set the bit at the specified index of frame byte with the replacement bit
+        #             byte = clearedByte | positionedReplacementBit
+        #     frame_bytes[i//lsb] = byte
+            
+        mask = 0xFF << lsb  # Create a mask to clear the least significant bits
+            
+        # Encode payload into cover frame
+        index = 0
+        for i in range(len(frame_bytes)):
+            if (index + (lsb-1)) < lenOfSecretBits:
+                secretlsbs = secretBits[index:index+lsb]
+                # if message not divisible by lsb, last character bits misalign, need to pad 0s on the right to width of lsb
+                if len(secretlsbs) < lsb:
+                    secretlsbs = secretlsbs.ljust(lsb, '0')
+                secretlsbsInt = int(secretlsbs, 2)
+                frame_bytes[i] &= mask
+                frame_bytes[i] |= secretlsbsInt
+                index += lsb
+            else:
+                break
         
         # Get the modified bytes
         frame_modified = bytes(frame_bytes)
