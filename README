@@ -1,85 +1,53 @@
-LSB Steganography
+# LSB Steganography
+
 This is a Python script for a GUI application that performs Least Significant Bit (LSB) steganography. It uses the Tkinter library for the GUI and the PIL library for image manipulation.
 
-Prerequisites
+## Prerequisites
+
 Before you begin, ensure you have met the following requirements:
 
-You have installed Python 3.6 or later.
-You have installed the following Python libraries: tkinter, PIL, numpy, opencv, and tkinterdnd2.
+- You have installed Python 3.6 or later.
+- You have installed the following Python libraries: `tkinter`, `PIL`, `numpy`, `opencv`, and `tkinterdnd2`.
+
 You can install the necessary libraries with pip:
-    pip install pillow numpy tkinterdnd2 opencv-python
+```sh
+pip install pillow numpy tkinterdnd2 opencv-python
+```
+
+## Running LSB Steganography
+
+Open a terminal in the directory containing `encoder_main.py` and `decoder_main.py`.
 
 To test the encode functionality, run the following command:
+```sh
 python encoder_main.py
+```
+
 To test the decode functionality, run the following command:
+```sh
 python decoder_main.py
+```
 
-The GUI will open. For encoding:
-Select a cover file (an image or video file).
-Select a payload file (a text file).
-Select the number of least significant bits to use for the steganography.
-Click "Encode" to hide the payload in the cover file. The steganographic file will be saved and displayed in the GUI.
+The GUI will open.
 
-For decoding:
-Select a stego file (an image or video file with hidden data).
-Select the number of least significant bits used for encoding.
-Click "Decode" to extract the hidden data from the stego file.
-Using the GUI
-Select Cover File: Choose the image or video file you want to use to hide the message.
-Select Payload File: Choose the text file containing the message you want to hide.
-Number of LSBs: Select the number of least significant bits to use for the encoding.
-Encode: Click to encode the message into the cover file.
-Select Stego File: Choose the stego image or video file to decode the hidden message.
-Decode: Click to extract the hidden message from the stego file.
+### For Encoding:
 
-<!-- Install FFmpeg on Windows:
-FFmpeg is required for handling video and audio encoding/decoding. Follow these steps to install FFmpeg on your Windows machine.
+1. Select a cover file (an image or video file).
+2. Select a payload file (a text file).
+3. Select the number of least significant bits to use for the steganography.
+4. Click "Encode" to hide the payload in the cover file. The steganographic file will be saved and displayed in the GUI.
 
-Step 1: Download FFmpeg
-Go to the FFmpeg official download page.
-Click on the "Windows" icon under "Get packages & executable files".
-Choose the "Windows Builds" from the list, which will redirect you to a third-party site, typically gyan.dev.
-On the gyan.dev page, scroll down to the "Release builds" section.
-Download the latest "ffmpeg-release-full.7z" file.
-Step 2: Extract the FFmpeg Download
-Navigate to the location where you downloaded the ffmpeg-release-full.7z file.
-Use an extraction tool like 7-Zip to extract the contents of the .7z file. Right-click on the file, choose "7-Zip" -> "Extract Here" or "Extract to ffmpeg-release-full".
-Step 3: Move FFmpeg to a Permanent Location
-After extraction, you will see a folder named something like ffmpeg-<version>-full.
-Move this folder to a location where you want to keep FFmpeg, such as C:\ffmpeg.
-Step 4: Add FFmpeg to the System Path
-Open the Start menu, search for "Environment Variables" and select "Edit the system environment variables".
-In the "System Properties" window, click on the "Environment Variables" button.
-In the "Environment Variables" window, find the "Path" variable in the "System variables" section and select it. Click on "Edit".
-In the "Edit Environment Variable" window, click on "New" and add the path to the bin directory of the FFmpeg folder you moved earlier, e.g., C:\ffmpeg\bin.
-Click "OK" to close all windows.
-Step 5: Verify FFmpeg Installation
-Open Command Prompt by pressing Win + R, typing cmd, and hitting Enter.
-Type ffmpeg and press Enter.
-If the installation was successful, you should see the FFmpeg version and configuration details.
-Running LSB Steganography
-To run the LSB Steganography scripts, follow these steps: -->
+### For Decoding:
 
-Open a terminal in the cheng directory containing encoder_main.py and decoder_main.py.
-To test the encode functionality, run the following command:
-python encoder_main.py
-To test the decode functionality, run the following command:
-python decoder_main.py
+1. Select a stego file (an image or video file with hidden data).
+2. Select the number of least significant bits used for encoding.
+3. Click "Decode" to extract the hidden data from the stego file.
 
-The GUI will open. For encoding:
-Select a cover file (an image or video file).
-Select a payload file (a text file).
-Select the number of least significant bits to use for the steganography.
-Click "Encode" to hide the payload in the cover file. The steganographic file will be saved and displayed in the GUI.
+## Using the GUI
 
-For decoding:
-Select a stego file (an image or video file with hidden data).
-Select the number of least significant bits used for encoding.
-Click "Decode" to extract the hidden data from the stego file.
-Using the GUI
-Select Cover File: Choose the image or video file you want to use to hide the message.
-Select Payload File: Choose the text file containing the message you want to hide.
-Number of LSBs: Select the number of least significant bits to use for the encoding.
-Encode: Click to encode the message into the cover file.
-Select Stego File: Choose the stego image or video file to decode the hidden message.
-Decode: Click to extract the hidden message from the stego file.
+- **Select Cover File**: Choose the image or video file you want to use to hide the message.
+- **Select Payload File**: Choose the text file containing the message you want to hide.
+- **Number of LSBs**: Select the number of least significant bits to use for the encoding.
+- **Encode**: Click to encode the message into the cover file.
+- **Select Stego File**: Choose the stego image or video file to decode the hidden message.
+- **Decode**: Click to extract the hidden message from the stego file.
